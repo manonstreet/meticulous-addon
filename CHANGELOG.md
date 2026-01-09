@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.8] - 2026-01-09
+
+### Fixed
+- Migrated from S6 overlay V2 (`/etc/services.d/`) to V3 (`/etc/s6-overlay/s6-rc.d/`) directory structure.
+- Simplified Dockerfile to match Home Assistant official add-ons (removed unnecessary chmod and ENTRYPOINT).
+- Changed service script shebang from `#!/command/with-contenv` to `#!/usr/bin/with-contenv` to match working add-ons.
+
 ## [0.2.7] - 2026-01-09
 
 ### Fixed
