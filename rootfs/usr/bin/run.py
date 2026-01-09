@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import sys
+import warnings
 from typing import Any, Dict, Optional
 import random
 from datetime import datetime
@@ -51,8 +52,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Suppress verbose Pydantic validation errors from pyMeticulous
-logging.getLogger("pydantic").setLevel(logging.ERROR)
-logging.getLogger("pydantic_core").setLevel(logging.ERROR)
+logging.getLogger("pydantic").setLevel(logging.CRITICAL)
+logging.getLogger("pydantic_core").setLevel(logging.CRITICAL)
+logging.getLogger("pydantic.main").setLevel(logging.CRITICAL)
+warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 
 class MeticulousAddon:
