@@ -186,6 +186,7 @@ class MeticulousAddon:
 
             # Setup event handlers for Socket.IO using ApiOptions
             options = ApiOptions(
+                onStatus=self._handle_status_event,
                 onTemperatureSensors=self._handle_temperature_event,
                 onProfileChange=self._handle_profile_event,
                 onNotification=self._handle_notification_event,
@@ -900,7 +901,10 @@ class MeticulousAddon:
             # Update current profile
             # Fetch full profile details if needed
             if self.loop:
+                logger.debug("Scheduling profile info update")
                 asyncio.run_coroutine_threadsafe(self.update_profile_info(), self.loop)
+            else:
+                logger.warning("No event loop available for profile update")
 
         except Exception as e:
             logger.error(f"Error handling profile event: {e}", exc_info=True)
@@ -932,10 +936,14 @@ class MeticulousAddon:
     async def update_profile_info(self):
         """Fetch and update current profile information."""
         if not self.api:
+            logger.warning("Cannot update profile: API not connected")
             return
 
         try:
-            last_profile = self.api.get_last_profile()
+            api = self.api  # Capture reference for executor
+            last_profile = await asyncio.get_running_loop().run_in_executor(
+                None, lambda: api.get_last_profile()
+            )
             if not isinstance(last_profile, APIError):
                 self.current_profile = last_profile.profile
 
@@ -948,9 +956,11 @@ class MeticulousAddon:
 
                 await self.publish_to_homeassistant(profile_data)
                 logger.info(f"Updated profile: {last_profile.profile.name}")
+            else:
+                logger.warning(f"Failed to get profile: {last_profile.error}")
 
         except Exception as e:
-            logger.debug(f"Could not retrieve profile (firmware mismatch): " f"{type(e).__name__}")
+            logger.error(f"Error updating profile info: {e}", exc_info=True)
 
     async def update_statistics(self):
         """Fetch and update shot statistics."""
@@ -958,7 +968,10 @@ class MeticulousAddon:
             return
 
         try:
-            stats = self.api.get_history_statistics()
+            api = self.api  # Capture reference for executor
+            stats = await asyncio.get_running_loop().run_in_executor(
+                None, lambda: api.get_history_statistics()
+            )
             if not isinstance(stats, APIError):
                 stats_data = {
                     "total_shots": stats.totalSavedShots,
@@ -969,7 +982,9 @@ class MeticulousAddon:
 
             # Also get last shot info
             try:
-                last_shot = self.api.get_last_shot()
+                last_shot = await asyncio.get_running_loop().run_in_executor(
+                    None, lambda: api.get_last_shot()
+                )
                 if last_shot and not isinstance(last_shot, APIError):
                     last_shot_data = {
                         "last_shot_name": last_shot.name,
@@ -994,7 +1009,10 @@ class MeticulousAddon:
             return
 
         try:
-            settings = self.api.get_settings()
+            api = self.api  # Capture reference for executor
+            settings = await asyncio.get_running_loop().run_in_executor(
+                None, lambda: api.get_settings()
+            )
             if not isinstance(settings, APIError):
                 settings_data = {
                     "sounds_enabled": settings.enable_sounds,
