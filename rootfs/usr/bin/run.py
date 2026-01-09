@@ -761,6 +761,10 @@ class MeticulousAddon:
 
         while self.running:
             try:
+                # Retry MQTT connection if not connected
+                if self.mqtt_enabled and not self.mqtt_client:
+                    self._mqtt_connect()
+
                 # Update profile info every 30 seconds
                 await self.update_profile_info()
 
