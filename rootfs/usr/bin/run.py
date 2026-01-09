@@ -1018,23 +1018,27 @@ class MeticulousAddon:
 
         try:
             api = self.api  # Capture reference for executor
-            last_profile = await asyncio.get_running_loop().run_in_executor(
-                None, lambda: api.get_last_profile()
-            )
-            if not isinstance(last_profile, APIError):
-                self.current_profile = last_profile.profile
 
-                profile_data = {
-                    "active_profile": last_profile.profile.name,
-                    "profile_author": last_profile.profile.author,
-                    "target_temperature": last_profile.profile.temperature,
-                    "target_weight": last_profile.profile.final_weight,
-                }
+            def fetch_last_profile_raw():
+                resp = api.session.get(f"{api.base_url}/api/v1/profile/last")
+                resp.raise_for_status()
+                return resp.json()
 
-                await self.publish_to_homeassistant(profile_data)
-                logger.info(f"Updated profile: {last_profile.profile.name}")
-            else:
-                logger.warning(f"Failed to get profile: {last_profile.error}")
+            data = await asyncio.get_running_loop().run_in_executor(None, fetch_last_profile_raw)
+
+            profile = data.get("profile", {}) if isinstance(data, dict) else {}
+
+            self.current_profile = profile.get("name", self.current_profile)
+
+            profile_data = {
+                "active_profile": profile.get("name", "Unknown"),
+                "profile_author": profile.get("author"),
+                "target_temperature": profile.get("temperature"),
+                "target_weight": profile.get("final_weight"),
+            }
+
+            await self.publish_to_homeassistant(profile_data)
+            logger.info(f"Updated profile: {profile_data['active_profile']}")
 
         except Exception as e:
             logger.error(f"Error updating profile info: {e}", exc_info=True)
