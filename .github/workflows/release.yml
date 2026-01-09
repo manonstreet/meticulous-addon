@@ -70,7 +70,7 @@ jobs:
           cache-to: type=registry,ref=ghcr.io/nickwilsonr/${{ matrix.arch }}-meticulous-addon:buildcache,mode=max
 
       - name: Make GHCR package public
-        if: ${{ secrets.GHCR_TOKEN != '' }}
+        if: ${{ secrets.GHCR_TOKEN }}
         env:
           GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
