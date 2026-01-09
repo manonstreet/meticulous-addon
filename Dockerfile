@@ -11,8 +11,8 @@ RUN pip3 install --no-cache-dir -r /tmp/requirements.txt
 COPY rootfs /
 
 # Ensure scripts are executable
-RUN chmod a+x /init && \
-    chmod a+x /usr/bin/run.py && \
-    chmod a+x /etc/services.d/meticulous/run
+RUN chmod -R +x /etc/services.d && \
+    chmod +x /usr/bin/run.py && \
+    find / -maxdepth 1 -name 'init' -exec chmod +x {} \;
 
 # Use s6 init from base image (no CMD override)
