@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Explicitly enable AppArmor in `config.yaml` (`apparmor: true`).
 
+## [0.2.11] - 2026-01-09
+
+### Changed
+- Temporarily disable AppArmor (`apparmor: false`) to A/B test whether the `/init` permission issue is AppArmor-related.
+
 
 ### Fixed
 - **Converted config.json and build.json to YAML format** (config.yaml, build.yaml) to match all official Home Assistant add-ons.
