@@ -383,6 +383,7 @@ class MeticulousAddon:
                 payload["unit_of_meas"] = "%"
             # Publish discovery config
             self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
+        logger.info(f"Published {len(self._mqtt_sensor_mapping())} MQTT discovery messages")
 
     # ---------------------------------------------------------------------
     # Test-facing helpers (wrappers) for discovery and backoff
