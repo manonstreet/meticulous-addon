@@ -2,6 +2,17 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.4.0] - 2026-01-09
+
+### 🎉 Real-time updates now work!
+All sensors now update instantly when you interact with your machine - profile changes, shot weight, temperatures, and machine state all reflect immediately in Home Assistant.
+
+### What's Fixed
+- Sensors update in real-time instead of staying "unknown"
+- Profile changes on the machine now update the active profile sensor
+- Shot weight tracks live during brewing
+- Temperature sensors update continuously
+
 ## [0.3.6] - 2026-01-09
 
 ### ✨ Improvements
