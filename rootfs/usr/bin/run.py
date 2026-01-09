@@ -166,7 +166,10 @@ class MeticulousAddon:
                     return False
             except Exception as e:
                 logger.error(f"Error validating device info: {e}")
-                logger.warning("Continuing with connection despite validation error - firmware mismatch possible")
+                logger.warning(
+                    "Continuing despite validation error - firmware mismatch "
+                    "possible"
+                )
                 # Use a placeholder to continue operation
                 from meticulous.models import DeviceInfo
                 device_info = DeviceInfo(
