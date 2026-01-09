@@ -10,8 +10,9 @@ arch:
 startup: application
 boot: auto
 init: false
-apparmor: true
-network: true
+apparmor: false
+services:
+  - mqtt:need
 homeassistant_api: true
 hassio_api: true
 hassio_role: default
