@@ -92,7 +92,7 @@ class MeticulousAddon:
 
         # Home Assistant session
         self.ha_session: Optional[aiohttp.ClientSession] = None
-        
+
         # Event loop reference for Socket.IO callbacks
         self.loop: Optional[asyncio.AbstractEventLoop] = None
 
