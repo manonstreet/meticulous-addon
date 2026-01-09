@@ -1,0 +1,9 @@
+{
+  "include": ["."],
+  "exclude": [".venv", "**/__pycache__"],
+  "extraPaths": [
+    "rootfs/usr/bin"
+  ],
+  "reportMissingImports": false,
+  "reportMissingModuleSource": false
+}

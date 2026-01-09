@@ -114,13 +114,16 @@ def handle_command_load_profile(addon: 'MeticulousAddon', profile_id: str):
     if not profile_id:
         logger.error("load_profile: missing profile_id")
         return
-    result = addon.api.load_profile_by_id(profile_id)
-    if isinstance(result, APIError):
-        logger.error(f"load_profile failed: {result.error}")
-    else:
-        logger.info(f"load_profile: Success ({profile_id})")
-        # Trigger profile update
-        asyncio.create_task(addon.update_profile_info())
+    try:
+        result = addon.api.load_profile_by_id(profile_id)
+        if isinstance(result, APIError):
+            logger.error(f"load_profile failed: {result.error}")
+        else:
+            logger.info(f"load_profile: Success ({profile_id})")
+            # Trigger profile update (safe if no running loop)
+            _run_or_schedule(addon.update_profile_info())
+    except Exception as e:
+        logger.error(f"load_profile error: {e}", exc_info=True)
 
 
 def handle_command_set_brightness(addon: 'MeticulousAddon', payload: str):
@@ -130,9 +133,10 @@ def handle_command_set_brightness(addon: 'MeticulousAddon', payload: str):
         return
     try:
         data = json.loads(payload) if payload.startswith("{") else {"brightness": int(payload)}
+        interpolation_value = data.get("interpolation", "curve")
         brightness_req = BrightnessRequest(
             brightness=data.get("brightness", 50),
-            interpolation=data.get("interpolation", "curve"),
+            interpolation=str(interpolation_value) if interpolation_value is not None else "curve",
             animation_time=data.get("animation_time", 500),
         )
         result = addon.api.set_brightness(brightness_req)
@@ -140,8 +144,8 @@ def handle_command_set_brightness(addon: 'MeticulousAddon', payload: str):
             logger.error(f"set_brightness failed: {result.error}")
         else:
             logger.info(f"set_brightness: Success ({data.get('brightness')})")
-            # Trigger settings update
-            asyncio.create_task(addon.update_settings())
+            # Trigger settings update (safe if no running loop)
+            _run_or_schedule(addon.update_settings())
     except Exception as e:
         logger.error(f"set_brightness error: {e}", exc_info=True)
 
@@ -159,7 +163,20 @@ def handle_command_enable_sounds(addon: 'MeticulousAddon', payload: str):
             logger.error(f"enable_sounds failed: {result.error}")
         else:
             logger.info(f"enable_sounds: Success ({enabled})")
-            # Trigger settings update
-            asyncio.create_task(addon.update_settings())
+            # Trigger settings update (safe if no running loop)
+            _run_or_schedule(addon.update_settings())
     except Exception as e:
         logger.error(f"enable_sounds error: {e}", exc_info=True)
+
+
+def _run_or_schedule(coro):
+    """Run the coroutine immediately if no loop, else schedule it.
+
+    In unit tests there may be no running event loop; this avoids RuntimeError
+    while keeping non-blocking behavior in the add-on runtime.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(coro)
+    except RuntimeError:
+        asyncio.run(coro)
