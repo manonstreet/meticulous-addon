@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.4.1] - 2026-01-09
+
+### Bug Fix
+- Fixed excessive logging that could overwhelm the system
+
 ## [0.4.0] - 2026-01-09
 
 ### 🎉 Real-time updates now work!
