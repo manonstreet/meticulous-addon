@@ -558,19 +558,32 @@ class MeticulousAddon:
     def _handle_temperature_event(self, temps: Temperatures):
         """Handle real-time temperature updates from Socket.IO."""
         try:
-            temp_data = {
-                "boiler_temperature": temps.t_bar_up,
-                "brew_head_temperature": temps.t_bar_down,
-                "external_temp_1": temps.t_ext_1,
-                "external_temp_2": temps.t_ext_2,
-            }
+            # Handle both dict and object types
+            if isinstance(temps, dict):
+                temp_data = {
+                    "boiler_temperature": temps.get("t_bar_up"),
+                    "brew_head_temperature": temps.get("t_bar_down"),
+                    "external_temp_1": temps.get("t_ext_1"),
+                    "external_temp_2": temps.get("t_ext_2"),
+                }
+                t_bar_up = temps.get("t_bar_up", 0)
+                t_bar_down = temps.get("t_bar_down", 0)
+            else:
+                temp_data = {
+                    "boiler_temperature": temps.t_bar_up,
+                    "brew_head_temperature": temps.t_bar_down,
+                    "external_temp_1": temps.t_ext_1,
+                    "external_temp_2": temps.t_ext_2,
+                }
+                t_bar_up = temps.t_bar_up
+                t_bar_down = temps.t_bar_down
 
             # Publish to Home Assistant (async)
             asyncio.create_task(self.publish_to_homeassistant(temp_data))
 
             logger.debug(
-                f"Temps: Boiler={temps.t_bar_up:.1f}°C, "
-                f"Brew Head={temps.t_bar_down:.1f}°C"
+                f"Temps: Boiler={t_bar_up:.1f}°C, "
+                f"Brew Head={t_bar_down:.1f}°C"
             )
 
         except Exception as e:
