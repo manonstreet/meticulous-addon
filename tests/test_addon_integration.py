@@ -32,10 +32,10 @@ class TestConfigLoading(unittest.TestCase):
         }
         mock_read = mock_open.return_value.__enter__.return_value.read
         mock_read.return_value = json.dumps(test_config)
-        
+
         from run import MeticulousAddon
         addon = MeticulousAddon()
-        
+
         self.assertEqual(addon.machine_ip, "192.168.1.100")
         self.assertEqual(addon.scan_interval, 30)
 
@@ -43,10 +43,10 @@ class TestConfigLoading(unittest.TestCase):
     def test_load_config_defaults(self, mock_exists):
         """Test default config values when no file exists."""
         mock_exists.return_value = False
-        
+
         from run import MeticulousAddon
         addon = MeticulousAddon()
-        
+
         # Should have default values
         self.assertEqual(addon.scan_interval, 30)
         self.assertTrue(addon.mqtt_enabled)
@@ -61,13 +61,13 @@ class TestRetryLogic(unittest.TestCase):
     def test_backoff_calculation_no_jitter(self, mock_exists):
         """Test backoff delay calculation without jitter."""
         mock_exists.return_value = False
-        
+
         from run import MeticulousAddon
         addon = MeticulousAddon()
         addon.retry_jitter = False
         addon.retry_initial = 2
         addon.retry_max = 60
-        
+
         # Test exponential backoff
         self.assertEqual(addon._calculate_backoff(0), 2)
         self.assertEqual(addon._calculate_backoff(1), 4)
@@ -83,13 +83,13 @@ class TestRetryLogic(unittest.TestCase):
     def test_backoff_calculation_with_jitter(self, mock_exists):
         """Test backoff delay calculation with jitter."""
         mock_exists.return_value = False
-        
+
         from run import MeticulousAddon
         addon = MeticulousAddon()
         addon.retry_jitter = True
         addon.retry_initial = 2
         addon.retry_max = 60
-        
+
         # With jitter, delay should be within 80-120% of base
         for attempt in range(5):
             delay = addon._calculate_backoff(attempt)
@@ -105,16 +105,16 @@ class TestMQTTDiscovery(unittest.TestCase):
     def test_sensor_discovery_payload(self, mock_exists):
         """Test MQTT discovery payload for sensors."""
         mock_exists.return_value = False
-        
+
         from run import MeticulousAddon
         addon = MeticulousAddon()
         addon.machine_ip = "192.168.1.100"
-        
+
         # Test discovery payload generation
         payload = addon._create_sensor_discovery(
             "state", "State", "mdi:coffee-maker"
         )
-        
+
         self.assertIsInstance(payload, dict)
         self.assertIn("name", payload)
         self.assertIn("state_topic", payload)
@@ -127,16 +127,16 @@ class TestMQTTDiscovery(unittest.TestCase):
     def test_switch_discovery_payload(self, mock_exists):
         """Test MQTT discovery payload for switches."""
         mock_exists.return_value = False
-        
+
         from run import MeticulousAddon
         addon = MeticulousAddon()
-        
+
         payload = addon._create_switch_discovery(
             "sounds_enabled",
             "Sounds Enabled",
             "enable_sounds"
         )
-        
+
         self.assertIsInstance(payload, dict)
         self.assertIn("command_topic", payload)
         self.assertIn("state_topic", payload)
@@ -150,11 +150,11 @@ class TestAPIConnection(unittest.TestCase):
     def test_api_initialization(self, mock_exists):
         """Test API client initialization."""
         mock_exists.return_value = False
-        
+
         from run import MeticulousAddon
         addon = MeticulousAddon()
         addon.machine_ip = "192.168.1.100"
-        
+
         # API should be initialized with correct host
         self.assertIsNone(addon.api)  # Not connected yet
 
@@ -166,12 +166,12 @@ class TestHealthMetrics(unittest.TestCase):
     def test_reconnect_counting(self, mock_exists):
         """Test reconnect counter increments."""
         mock_exists.return_value = False
-        
+
         from run import MeticulousAddon
         addon = MeticulousAddon()
-        
+
         self.assertEqual(addon.reconnect_count, 0)
-        
+
         # Simulate reconnects
         addon.reconnect_count += 1
         self.assertEqual(addon.reconnect_count, 1)
@@ -180,10 +180,10 @@ class TestHealthMetrics(unittest.TestCase):
     def test_error_tracking(self, mock_exists):
         """Test error tracking."""
         mock_exists.return_value = False
-        
+
         from run import MeticulousAddon
         addon = MeticulousAddon()
-        
+
         self.assertIsNone(addon.last_error)
         self.assertIsNone(addon.last_error_time)
 
@@ -195,10 +195,10 @@ class TestStateManagement(unittest.TestCase):
     def test_initial_state(self, mock_exists):
         """Test initial state values."""
         mock_exists.return_value = False
-        
+
         from run import MeticulousAddon
         addon = MeticulousAddon()
-        
+
         self.assertEqual(addon.current_state, "unknown")
         self.assertIsNone(addon.current_profile)
         self.assertFalse(addon.socket_connected)
@@ -208,10 +208,10 @@ class TestStateManagement(unittest.TestCase):
     def test_availability_topic(self, mock_exists):
         """Test availability topic format."""
         mock_exists.return_value = False
-        
+
         from run import MeticulousAddon
         addon = MeticulousAddon()
-        
+
         expected = "meticulous_espresso/availability"
         self.assertEqual(addon.availability_topic, expected)
 

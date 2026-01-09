@@ -148,7 +148,7 @@ class TestMQTTCommands(unittest.TestCase):
         msg.topic = f"{self.addon.command_prefix}/start_brew"
         msg.payload = b""
         self.addon.api.execute_action.return_value = {"success": True}
-        
+
         mqtt_on_message(self.addon, self.client, self.userdata, msg)
         self.addon.api.execute_action.assert_called_once_with(ActionType.START)
 
@@ -157,7 +157,7 @@ class TestMQTTCommands(unittest.TestCase):
         msg = Mock()
         msg.topic = f"{self.addon.command_prefix}/unknown_command"
         msg.payload = b""
-        
+
         # Should not raise exception, just log warning
         mqtt_on_message(self.addon, self.client, self.userdata, msg)
 
@@ -166,7 +166,7 @@ class TestMQTTCommands(unittest.TestCase):
         msg = Mock()
         msg.topic = f"{self.addon.command_prefix}/start_brew"
         msg.payload.decode.side_effect = Exception("Decode failed")
-        
+
         # Should not raise exception, just log error
         mqtt_on_message(self.addon, self.client, self.userdata, msg)
 
@@ -198,7 +198,7 @@ class TestCommandValidation(unittest.TestCase):
     def test_all_commands_with_no_api(self):
         """Test all commands handle missing API gracefully."""
         self.addon.api = None
-        
+
         # None of these should raise exceptions
         handle_command_start_brew(self.addon)
         handle_command_stop_brew(self.addon)

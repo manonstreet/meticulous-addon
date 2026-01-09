@@ -16,11 +16,9 @@ import json as jsonlib
 try:
     from meticulous.api import Api, ApiOptions
     from meticulous.api_types import (
-        ActionType,
         StatusData,
         Temperatures,
         APIError,
-        ProfileEvent,
         NotificationData,
     )
 except ImportError as e:
@@ -28,9 +26,9 @@ except ImportError as e:
     print("Make sure pyMeticulous is installed: pip install pymeticulous")
     sys.exit(1)
 
-# Import MQTT
+# Import MQTT - imported locally where needed to avoid F811
 try:
-    import paho.mqtt.client as mqtt
+    import paho.mqtt.client  # noqa: F401
 except ImportError as e:
     print(f"ERROR: Failed to import paho-mqtt: {e}")
     print("Make sure paho-mqtt is installed: pip install paho-mqtt")
@@ -72,22 +70,22 @@ class MeticulousAddon:
         # Connectivity state
         self.socket_connected = False
         self.api_connected = False
-        
+
         # Health metrics tracking
         self.start_time = datetime.now()
         self.reconnect_count = 0
         self.last_error = None
         self.last_error_time = None
-        
+
         # Initialize API with event handlers
         self.api: Optional[Api] = None
         self.supervisor_token = os.getenv("SUPERVISOR_TOKEN")
-        
+
         # State tracking
         self.current_state = "unknown"
         self.current_profile = None
         self.device_info = None
-        
+
         # Home Assistant session
         self.ha_session: Optional[aiohttp.ClientSession] = None
 
@@ -128,11 +126,11 @@ class MeticulousAddon:
             return False
 
         logger.info(f"Connecting to Meticulous machine at {self.machine_ip}")
-        
+
         try:
             # Build base URL
             base_url = f"http://{self.machine_ip}:8080/"
-            
+
             # Setup event handlers for Socket.IO
             options = ApiOptions(
                 onStatus=self._handle_status_event,
@@ -140,20 +138,23 @@ class MeticulousAddon:
                 onProfileChange=self._handle_profile_event,
                 onNotification=self._handle_notification_event,
             )
-            
+
             # Initialize API
             self.api = Api(base_url=base_url, options=options)
-            
+
             # Test connection by fetching device info
             device_info = self.api.get_device_info()
             if isinstance(device_info, APIError):
                 logger.error(f"Failed to connect: {device_info.error}")
                 return False
-            
+
             self.device_info = device_info
             logger.info(f"Connected to {device_info.name} (Serial: {device_info.serial})")
-            logger.info(f"Firmware: {device_info.firmware}, Software: {device_info.software_version}")
-            
+            logger.info(
+                f"Firmware: {
+                    device_info.firmware}, Software: {
+                    device_info.software_version}")
+
             # Connect Socket.IO for real-time updates
             try:
                 self.api.connect_to_socket()
@@ -165,16 +166,16 @@ class MeticulousAddon:
                 self.api_connected = True  # REST works, socket failed
                 logger.warning(f"Socket.IO connection failed: {e}")
                 logger.warning("Continuing with polling mode only")
-            
+
             # Publish device info to Home Assistant
             await self.publish_device_info()
             await self.publish_connectivity(True)
 
             # Connect to MQTT broker and publish discovery
             self._mqtt_connect()
-            
+
             return True
-            
+
         except Exception as e:
             logger.error(f"Error connecting to machine: {e}", exc_info=True)
             await self.publish_connectivity(False)
@@ -188,27 +189,31 @@ class MeticulousAddon:
         logger.info(f"Connectivity state: {state}")
         # Publish availability via MQTT
         if self.mqtt_client:
-            self.mqtt_client.publish(self.availability_topic, payload=("online" if connected else "offline"), qos=0, retain=True)
-    
+            self.mqtt_client.publish(self.availability_topic, payload=(
+                "online" if connected else "offline"), qos=0, retain=True)
+
     async def publish_health_metrics(self) -> None:
         """Publish add-on health metrics via MQTT."""
         if not (self.mqtt_enabled and self.mqtt_client):
             return
-        
+
         try:
             uptime = (datetime.now() - self.start_time).total_seconds()
             health_data = {
                 "uptime_seconds": int(uptime),
                 "reconnect_count": self.reconnect_count,
                 "last_error": self.last_error,
-                "last_error_time": self.last_error_time.isoformat() if self.last_error_time else None,
+                "last_error_time": self.last_error_time.isoformat() if self.last_error_time else None,  # noqa: E501
                 "api_connected": self.api_connected,
                 "socket_connected": self.socket_connected,
             }
-            
+
             health_topic = f"{self.slug}/health"
             self.mqtt_client.publish(health_topic, jsonlib.dumps(health_data), qos=0, retain=False)
-            logger.debug(f"Published health metrics: uptime={int(uptime)}s, reconnects={self.reconnect_count}")
+            logger.debug(
+                f"Published health metrics: uptime={
+                    int(uptime)}s, reconnects={
+                    self.reconnect_count}")
         except Exception as e:
             logger.error(f"Error publishing health metrics: {e}")
 
@@ -227,11 +232,6 @@ class MeticulousAddon:
             logger.debug("No supervisor token - cannot publish to HA")
             return
 
-        headers = {
-            "Authorization": f"Bearer {self.supervisor_token}",
-            "Content-Type": "application/json"
-        }
-
         # TODO: Implement Home Assistant MQTT discovery and state publishing
         # This will use the Home Assistant API or MQTT to create and update sensors
         # For now, log at debug and ensure non-blocking behavior
@@ -245,7 +245,8 @@ class MeticulousAddon:
                     if not mapping:
                         continue
                     topic = mapping["state_topic"]
-                    payload = str(value) if not isinstance(value, (dict, list)) else jsonlib.dumps(value)
+                    payload = str(value) if not isinstance(
+                        value, (dict, list)) else jsonlib.dumps(value)
                     self.mqtt_client.publish(topic, payload, qos=0, retain=False)
             except Exception as e:
                 logger.warning(f"MQTT publish failed: {e}")
@@ -267,25 +268,27 @@ class MeticulousAddon:
 
     def _mqtt_sensor_mapping(self) -> Dict[str, Dict[str, str]]:
         base = self.state_prefix
+        # fmt: off  # Long topic names are more readable on single lines
         return {
-            "connected": {"component": "binary_sensor", "state_topic": f"{base}/connected/state", "name": "Meticulous Connected"},
-            "state": {"component": "sensor", "state_topic": f"{base}/state/state", "name": "Meticulous State"},
-            "brewing": {"component": "binary_sensor", "state_topic": f"{base}/brewing/state", "name": "Meticulous Brewing"},
-            "boiler_temperature": {"component": "sensor", "state_topic": f"{base}/boiler_temperature/state", "name": "Boiler Temperature"},
-            "brew_head_temperature": {"component": "sensor", "state_topic": f"{base}/brew_head_temperature/state", "name": "Brew Head Temperature"},
-            "pressure": {"component": "sensor", "state_topic": f"{base}/pressure/state", "name": "Pressure"},
-            "flow_rate": {"component": "sensor", "state_topic": f"{base}/flow_rate/state", "name": "Flow Rate"},
-            "shot_timer": {"component": "sensor", "state_topic": f"{base}/shot_timer/state", "name": "Shot Timer"},
-            "shot_weight": {"component": "sensor", "state_topic": f"{base}/shot_weight/state", "name": "Shot Weight"},
-            "active_profile": {"component": "sensor", "state_topic": f"{base}/active_profile/state", "name": "Active Profile"},
-            "target_temperature": {"component": "sensor", "state_topic": f"{base}/target_temperature/state", "name": "Target Temperature"},
-            "target_weight": {"component": "sensor", "state_topic": f"{base}/target_weight/state", "name": "Target Weight"},
-            "firmware_version": {"component": "sensor", "state_topic": f"{base}/firmware_version/state", "name": "Firmware Version"},
-            "software_version": {"component": "sensor", "state_topic": f"{base}/software_version/state", "name": "Software Version"},
-            "voltage": {"component": "sensor", "state_topic": f"{base}/voltage/state", "name": "Voltage"},
-            "sounds_enabled": {"component": "binary_sensor", "state_topic": f"{base}/sounds_enabled/state", "name": "Sounds Enabled"},
-            "brightness": {"component": "sensor", "state_topic": f"{base}/brightness/state", "name": "Brightness"},
+            "connected": {"component": "binary_sensor", "state_topic": f"{base}/connected/state", "name": "Meticulous Connected"},  # noqa: E501
+            "state": {"component": "sensor", "state_topic": f"{base}/state/state", "name": "Meticulous State"},  # noqa: E501
+            "brewing": {"component": "binary_sensor", "state_topic": f"{base}/brewing/state", "name": "Meticulous Brewing"},  # noqa: E501
+            "boiler_temperature": {"component": "sensor", "state_topic": f"{base}/boiler_temperature/state", "name": "Boiler Temperature"},  # noqa: E501
+            "brew_head_temperature": {"component": "sensor", "state_topic": f"{base}/brew_head_temperature/state", "name": "Brew Head Temperature"},  # noqa: E501
+            "pressure": {"component": "sensor", "state_topic": f"{base}/pressure/state", "name": "Pressure"},  # noqa: E501
+            "flow_rate": {"component": "sensor", "state_topic": f"{base}/flow_rate/state", "name": "Flow Rate"},  # noqa: E501
+            "shot_timer": {"component": "sensor", "state_topic": f"{base}/shot_timer/state", "name": "Shot Timer"},  # noqa: E501
+            "shot_weight": {"component": "sensor", "state_topic": f"{base}/shot_weight/state", "name": "Shot Weight"},  # noqa: E501
+            "active_profile": {"component": "sensor", "state_topic": f"{base}/active_profile/state", "name": "Active Profile"},  # noqa: E501
+            "target_temperature": {"component": "sensor", "state_topic": f"{base}/target_temperature/state", "name": "Target Temperature"},  # noqa: E501
+            "target_weight": {"component": "sensor", "state_topic": f"{base}/target_weight/state", "name": "Target Weight"},  # noqa: E501
+            "firmware_version": {"component": "sensor", "state_topic": f"{base}/firmware_version/state", "name": "Firmware Version"},  # noqa: E501
+            "software_version": {"component": "sensor", "state_topic": f"{base}/software_version/state", "name": "Software Version"},  # noqa: E501
+            "voltage": {"component": "sensor", "state_topic": f"{base}/voltage/state", "name": "Voltage"},  # noqa: E501
+            "sounds_enabled": {"component": "binary_sensor", "state_topic": f"{base}/sounds_enabled/state", "name": "Sounds Enabled"},  # noqa: E501
+            "brightness": {"component": "sensor", "state_topic": f"{base}/brightness/state", "name": "Brightness"},  # noqa: E501
         }
+        # fmt: on
 
     def _mqtt_device(self) -> Dict[str, Any]:
         info = self.device_info
@@ -340,22 +343,23 @@ class MeticulousAddon:
             return
         try:
             import paho.mqtt.client as mqtt
-            
+
             client = mqtt.Client()
-            
+
             # Set callback for incoming commands
-            client.on_message = lambda client, userdata, msg: mqtt_on_message(self, client, userdata, msg)
-            
+            client.on_message = lambda client, userdata, msg: mqtt_on_message(
+                self, client, userdata, msg)
+
             # Last will marks offline
             client.will_set(self.availability_topic, payload="offline", qos=0, retain=True)
             if self.mqtt_username and self.mqtt_password:
                 client.username_pw_set(self.mqtt_username, self.mqtt_password)
             client.connect(self.mqtt_host, self.mqtt_port, keepalive=60)
-            
+
             # Subscribe to command topics
             client.subscribe(f"{self.command_prefix}/#")
             logger.info(f"Subscribed to MQTT commands at {self.command_prefix}/#")
-            
+
             client.loop_start()
             # Mark online
             client.publish(self.availability_topic, payload="online", qos=0, retain=True)
@@ -366,12 +370,12 @@ class MeticulousAddon:
         except Exception as e:
             self.mqtt_client = None
             logger.warning(f"MQTT connection failed: {e}")
-    
+
     async def publish_device_info(self):
         """Publish device information sensors to Home Assistant."""
         if not self.device_info:
             return
-        
+
         device_data = {
             "firmware_version": self.device_info.firmware,
             "software_version": self.device_info.software_version,
@@ -380,14 +384,14 @@ class MeticulousAddon:
             "name": self.device_info.name,
             "voltage": getattr(self.device_info, 'mainVoltage', None),
         }
-        
+
         await self.publish_to_homeassistant(device_data)
         logger.info("Published device info to Home Assistant")
-    
+
     # =========================================================================
     # Socket.IO Event Handlers
     # =========================================================================
-    
+
     def _handle_status_event(self, status: StatusData):
         """Handle real-time status updates from Socket.IO."""
         try:
@@ -396,7 +400,7 @@ class MeticulousAddon:
             if state != self.current_state:
                 logger.info(f"Machine state changed: {self.current_state} -> {state}")
                 self.current_state = state
-            
+
             # Extract sensor data
             sensors = status.sensors
             if isinstance(sensors, dict):
@@ -410,11 +414,11 @@ class MeticulousAddon:
                 flow = sensors.f
                 weight = sensors.w
                 temperature = sensors.t
-            
+
             sensor_data = {
                 "state": state,
                 "brewing": status.extracting or False,
-                "shot_timer": status.profile_time / 1000.0 if status.profile_time else 0,  # Convert ms to seconds
+                "shot_timer": status.profile_time / 1000.0 if status.profile_time else 0,  # Convert ms to seconds  # noqa: E501
                 "elapsed_time": status.time / 1000.0 if status.time else 0,
                 "pressure": pressure,
                 "flow_rate": flow,
@@ -422,16 +426,16 @@ class MeticulousAddon:
                 "temperature": temperature,
                 "active_profile": status.loaded_profile or "None",
             }
-            
+
             # Add setpoints if available
             if status.setpoints:
                 sensor_data["target_temperature"] = status.setpoints.temperature
                 sensor_data["target_pressure"] = status.setpoints.pressure
                 sensor_data["target_flow"] = status.setpoints.flow
-            
+
             # Publish to Home Assistant (async)
             asyncio.create_task(self.publish_to_homeassistant(sensor_data))
-            
+
             # Log during brewing
             if status.extracting:
                 logger.debug(
@@ -440,10 +444,10 @@ class MeticulousAddon:
                     f"F: {flow:.1f} ml/s | "
                     f"W: {weight:.1f}g"
                 )
-        
+
         except Exception as e:
             logger.error(f"Error handling status event: {e}", exc_info=True)
-    
+
     def _handle_temperature_event(self, temps: Temperatures):
         """Handle real-time temperature updates from Socket.IO."""
         try:
@@ -453,18 +457,18 @@ class MeticulousAddon:
                 "external_temp_1": temps.t_ext_1,
                 "external_temp_2": temps.t_ext_2,
             }
-            
+
             # Publish to Home Assistant (async)
             asyncio.create_task(self.publish_to_homeassistant(temp_data))
-            
+
             logger.debug(
                 f"Temps: Boiler={temps.t_bar_up:.1f}°C, "
                 f"Brew Head={temps.t_bar_down:.1f}°C"
             )
-        
+
         except Exception as e:
             logger.error(f"Error handling temperature event: {e}", exc_info=True)
-    
+
     def _handle_profile_event(self, profile_event: Any):
         """Handle profile change events from Socket.IO."""
         try:
@@ -472,15 +476,15 @@ class MeticulousAddon:
             # Update current profile
             # Fetch full profile details if needed
             asyncio.create_task(self.update_profile_info())
-        
+
         except Exception as e:
             logger.error(f"Error handling profile event: {e}", exc_info=True)
-    
+
     def _handle_notification_event(self, notification: NotificationData):
         """Handle machine notifications from Socket.IO."""
         try:
             logger.warning(f"Machine notification: {notification.message}")
-            
+
             # Forward to Home Assistant as a persistent notification
             notif_data = {
                 "notification": {
@@ -489,52 +493,52 @@ class MeticulousAddon:
                 }
             }
             asyncio.create_task(self.publish_to_homeassistant(notif_data))
-        
+
         except Exception as e:
             logger.error(f"Error handling notification event: {e}", exc_info=True)
-    
+
     # =========================================================================
     # Polling Updates (for non-real-time data)
     # =========================================================================
-    
+
     async def update_profile_info(self):
         """Fetch and update current profile information."""
         if not self.api:
             return
-        
+
         try:
             last_profile = self.api.get_last_profile()
             if not isinstance(last_profile, APIError):
                 self.current_profile = last_profile.profile
-                
+
                 profile_data = {
                     "active_profile": last_profile.profile.name,
                     "profile_author": last_profile.profile.author,
                     "target_temperature": last_profile.profile.temperature,
                     "target_weight": last_profile.profile.final_weight,
                 }
-                
+
                 await self.publish_to_homeassistant(profile_data)
                 logger.info(f"Updated profile: {last_profile.profile.name}")
-        
+
         except Exception as e:
             logger.error(f"Error updating profile info: {e}", exc_info=True)
-    
+
     async def update_statistics(self):
         """Fetch and update shot statistics."""
         if not self.api:
             return
-        
+
         try:
             stats = self.api.get_history_statistics()
             if not isinstance(stats, APIError):
                 stats_data = {
                     "total_shots": stats.totalSavedShots,
                 }
-                
+
                 await self.publish_to_homeassistant(stats_data)
                 logger.debug(f"Updated statistics: {stats.totalSavedShots} total shots")
-            
+
             # Also get last shot info
             last_shot = self.api.get_last_shot()
             if last_shot and not isinstance(last_shot, APIError):
@@ -544,18 +548,18 @@ class MeticulousAddon:
                     "last_shot_rating": last_shot.rating or "none",
                     "last_shot_time": datetime.fromtimestamp(last_shot.time).isoformat(),
                 }
-                
+
                 await self.publish_to_homeassistant(last_shot_data)
                 logger.debug(f"Last shot: {last_shot.name}")
-        
+
         except Exception as e:
             logger.error(f"Error updating statistics: {e}", exc_info=True)
-    
+
     async def update_settings(self):
         """Fetch and update settings sensors (brightness, sounds)."""
         if not self.api:
             return
-        
+
         try:
             settings = self.api.get_settings()
             if not isinstance(settings, APIError):
@@ -564,10 +568,10 @@ class MeticulousAddon:
                     # Note: Brightness may need to be retrieved separately or from device state
                     # The Settings object doesn't include brightness, may need different API call
                 }
-                
+
                 await self.publish_to_homeassistant(settings_data)
                 logger.debug(f"Updated settings: sounds={settings.enable_sounds}")
-        
+
         except Exception as e:
             logger.error(f"Error updating settings: {e}", exc_info=True)
 
@@ -595,29 +599,29 @@ class MeticulousAddon:
                     await asyncio.sleep(delay)
             else:
                 await asyncio.sleep(5)  # Check every 5 seconds
-    
+
     async def periodic_updates(self):
         """Perform periodic polling updates for non-real-time data."""
         # Initial delay to let Socket.IO establish
         await asyncio.sleep(10)
-        
+
         while self.running:
             try:
                 # Update profile info every 30 seconds
                 await self.update_profile_info()
-                
+
                 # Update settings (brightness, sounds)
                 await self.update_settings()
-                
+
                 # Update statistics
                 await self.update_statistics()
-                
+
                 # Publish health metrics
                 await self.publish_health_metrics()
-                
+
                 # Wait for next update cycle
                 await asyncio.sleep(self.scan_interval)
-            
+
             except Exception as e:
                 logger.error(f"Error in periodic updates: {e}", exc_info=True)
                 await asyncio.sleep(10)
@@ -625,7 +629,10 @@ class MeticulousAddon:
     async def run(self):
         """Main run loop."""
         logger.info("Starting Meticulous Espresso Add-on")
-        logger.info(f"Configuration: machine_ip={self.machine_ip}, scan_interval={self.scan_interval}s")
+        logger.info(
+            f"Configuration: machine_ip={
+                self.machine_ip}, scan_interval={
+                self.scan_interval}s")
         self.running = True
 
         # Create aiohttp session for HA API calls
@@ -638,7 +645,9 @@ class MeticulousAddon:
                 attempt = 1
                 while self.running and not await self.connect_to_machine():
                     delay = self._compute_backoff(attempt)
-                    logger.error(f"Failed to connect to machine (attempt {attempt}). Retrying in {delay:.1f}s...")
+                    logger.error(
+                        f"Failed to connect to machine (attempt {attempt}). Retrying in {
+                            delay:.1f}s...")
                     await asyncio.sleep(delay)
                     attempt += 1
 
@@ -647,9 +656,9 @@ class MeticulousAddon:
                 asyncio.create_task(self.maintain_socket_connection()),
                 asyncio.create_task(self.periodic_updates()),
             ]
-            
+
             logger.info("Add-on running. Press Ctrl+C to stop.")
-            
+
             # Keep running until stopped
             await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -659,7 +668,7 @@ class MeticulousAddon:
             logger.error(f"Fatal error in main loop: {e}", exc_info=True)
         finally:
             self.running = False
-            
+
             # Cleanup
             if self.api and self.socket_connected:
                 try:
@@ -667,10 +676,10 @@ class MeticulousAddon:
                     logger.info("Socket.IO disconnected")
                 except Exception as e:
                     logger.error(f"Error disconnecting socket: {e}")
-            
+
             if self.ha_session:
                 await self.ha_session.close()
-            
+
             logger.info("Add-on stopped")
 
 
