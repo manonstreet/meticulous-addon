@@ -159,10 +159,24 @@ class MeticulousAddon:
             self.api = Api(base_url=base_url, options=options)  # type: ignore[assignment]
 
             # Test connection by fetching device info
-            device_info = self.api.get_device_info()
-            if isinstance(device_info, APIError):
-                logger.error(f"Failed to connect: {device_info.error}")
-                return False
+            try:
+                device_info = self.api.get_device_info()
+                if isinstance(device_info, APIError):
+                    logger.error(f"Failed to connect: {device_info.error}")
+                    return False
+            except Exception as e:
+                logger.error(f"Error validating device info: {e}")
+                logger.warning("Continuing with connection despite validation error - firmware mismatch possible")
+                # Use a placeholder to continue operation
+                from meticulous.models import DeviceInfo
+                device_info = DeviceInfo(
+                    name="Unknown",
+                    model="Unknown",
+                    serial="Unknown",
+                    firmware="Unknown",
+                    software_version="Unknown",
+                    model_version="0.0.0"
+                )
 
             self.device_info = device_info
             logger.info(f"Connected to {device_info.name} (Serial: {device_info.serial})")
