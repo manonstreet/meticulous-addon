@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*.*.*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (without leading v)'
+        required: false
+        default: ''
 
 jobs:
   build:
@@ -39,7 +44,10 @@ jobs:
       - name: Extract version
         id: meta
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${{ github.event.inputs.version }}"
+          if [ -z "$VERSION" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
@@ -69,3 +77,11 @@ jobs:
             ghcr.io/nickwilsonr/${{ matrix.arch }}-meticulous-addon:${{ steps.meta.outputs.version }}
           cache-from: type=registry,ref=ghcr.io/nickwilsonr/${{ matrix.arch }}-meticulous-addon:buildcache
           cache-to: type=registry,ref=ghcr.io/nickwilsonr/${{ matrix.arch }}-meticulous-addon:buildcache,mode=max
+
+      - name: Make GHCR package public
+        if: ${{ secrets.GHCR_TOKEN != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          echo "Setting visibility=public for ${{ matrix.arch }}-meticulous-addon"
+          gh api -X PUT /user/packages/container/${{ matrix.arch }}-meticulous-addon/visibility -f visibility=public
