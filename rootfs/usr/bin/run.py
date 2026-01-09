@@ -92,6 +92,9 @@ class MeticulousAddon:
 
         # Home Assistant session
         self.ha_session: Optional[aiohttp.ClientSession] = None
+        
+        # Event loop reference for Socket.IO callbacks
+        self.loop: Optional[asyncio.AbstractEventLoop] = None
 
         # MQTT configuration
         self.mqtt_enabled = bool(self.config.get("mqtt_enabled", True))
@@ -545,7 +548,10 @@ class MeticulousAddon:
                 sensor_data["target_flow"] = status.setpoints.flow
 
             # Publish to Home Assistant (async)
-            asyncio.create_task(self.publish_to_homeassistant(sensor_data))
+            if self.loop:
+                asyncio.run_coroutine_threadsafe(
+                    self.publish_to_homeassistant(sensor_data), self.loop
+                )
 
             # Log during brewing
             if status.extracting:
@@ -583,7 +589,10 @@ class MeticulousAddon:
                 t_bar_down = temps.t_bar_down
 
             # Publish to Home Assistant (async)
-            asyncio.create_task(self.publish_to_homeassistant(temp_data))
+            if self.loop:
+                asyncio.run_coroutine_threadsafe(
+                    self.publish_to_homeassistant(temp_data), self.loop
+                )
 
             logger.debug(
                 f"Temps: Boiler={t_bar_up:.1f}°C, "
@@ -599,7 +608,10 @@ class MeticulousAddon:
             logger.info(f"Profile changed: {profile_event}")
             # Update current profile
             # Fetch full profile details if needed
-            asyncio.create_task(self.update_profile_info())
+            if self.loop:
+                asyncio.run_coroutine_threadsafe(
+                    self.update_profile_info(), self.loop
+                )
 
         except Exception as e:
             logger.error(f"Error handling profile event: {e}", exc_info=True)
@@ -616,7 +628,10 @@ class MeticulousAddon:
                     "title": "Meticulous Espresso",
                 }
             }
-            asyncio.create_task(self.publish_to_homeassistant(notif_data))
+            if self.loop:
+                asyncio.run_coroutine_threadsafe(
+                    self.publish_to_homeassistant(notif_data), self.loop
+                )
 
         except Exception as e:
             logger.error(f"Error handling notification event: {e}", exc_info=True)
@@ -752,6 +767,7 @@ class MeticulousAddon:
 
     async def run(self):
         """Main run loop."""
+        self.loop = asyncio.get_running_loop()
         logger.info("Starting Meticulous Espresso Add-on")
         logger.info(
             f"Configuration: machine_ip={self.machine_ip}, scan_interval={self.scan_interval}s")
