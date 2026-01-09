@@ -12,7 +12,6 @@ COPY rootfs /
 
 # Ensure scripts are executable
 RUN chmod -R +x /etc/services.d && \
-    chmod +x /usr/bin/run.py && \
-    find / -maxdepth 1 -name 'init' -exec chmod +x {} \;
+    chmod +x /usr/bin/run.py
 
 # Use s6 init from base image (no CMD override)
