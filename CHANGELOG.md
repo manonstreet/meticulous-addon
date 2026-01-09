@@ -1,6 +1,12 @@
 # Changelog
 
 All notable user-facing changes to this add-on are documented here.
+## [0.4.3] - 2026-01-09
+
+### Bug Fixes
+- Fixed profile info loading when the machine reports fractional timestamps
+- Show a clear error and stop startup if the machine IP is not set
+
 ## [0.4.2] - 2026-01-09
 
 ### Bug Fix
