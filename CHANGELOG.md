@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.3.2] - 2026-01-09
+
+### 🐛 Bug Fixes
+- Improved diagnostic logging
+
 ## [0.3.1] - 2026-01-09
 
 ### 🐛 Bug Fixes
