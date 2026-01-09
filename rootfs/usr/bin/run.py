@@ -461,7 +461,7 @@ class MeticulousAddon:
         try:
             import paho.mqtt.client as mqtt
 
-            client = mqtt.Client()
+            client = mqtt.Client(client_id=self.slug)
 
             # Set callback for incoming commands
             client.on_message = lambda client, userdata, msg: mqtt_on_message(
