@@ -159,18 +159,6 @@ For more examples, see [docs/automations.md](docs/automations.md).
 
 ---
 
-## Testing
-
-The add-on includes a comprehensive test suite (27 passing tests):
-
-```bash
-python tests/run_tests.py
-```
-
-Tests cover MQTT commands, configuration loading, error handling, and more. See [tests/README.md](tests/README.md) for details.
-
----
-
 ## Documentation
 
 - [Automations Guide](docs/automations.md) — Example automations for Meticulous

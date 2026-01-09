@@ -113,6 +113,50 @@ Machine API → Socket.IO + REST → Add-on → MQTT → Home Assistant
 
 ---
 
+## Testing
+
+The add-on includes a comprehensive test suite with 27 passing tests covering core functionality:
+
+### Running Tests
+
+```bash
+# From the root directory
+python tests/run_tests.py
+
+# Or with verbose output
+python -m unittest discover tests -v
+```
+
+### Test Coverage
+
+**test_mqtt_commands.py** (18 tests):
+- All MQTT command handlers (start_brew, stop_brew, continue_brew, preheat, tare_scale)
+- Load profile with validation
+- Set brightness (integer and JSON payloads)
+- Enable/disable sounds (multiple payload formats)
+- Error handling with missing API
+- MQTT message routing and exception handling
+
+**test_addon_integration.py** (14 tests):
+- Configuration loading from options.json
+- Default configuration values
+- Retry logic and exponential backoff
+- State management and availability
+- Health metrics tracking
+- Import validation (pyMeticulous, paho-mqtt)
+
+### Writing New Tests
+
+When adding features:
+1. Add unit tests in `tests/test_mqtt_commands.py` for command handlers
+2. Add integration tests in `tests/test_addon_integration.py` for system behavior
+3. Mock external dependencies (API, MQTT) to isolate functionality
+4. Run tests before committing changes
+
+See [tests/README.md](../tests/README.md) for more details.
+
+---
+
 ## Testing Checklist
 
 - [ ] Socket.IO connected to machine
