@@ -175,7 +175,7 @@ class MeticulousAddon:
                     logger.error(f"Failed to connect: {device_info.error}")
                     return False
             except Exception as e:
-                logger.error(f"Error validating device info: {e}")
+                logger.debug(f"Device info validation error (expected): {type(e).__name__}")
                 logger.warning(
                     "Continuing despite validation error - firmware mismatch "
                     "possible"
