@@ -50,6 +50,10 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# Suppress verbose Pydantic validation errors from pyMeticulous
+logging.getLogger("pydantic").setLevel(logging.ERROR)
+logging.getLogger("pydantic_core").setLevel(logging.ERROR)
+
 
 class MeticulousAddon:
     """Main class for Meticulous Espresso Add-on."""
