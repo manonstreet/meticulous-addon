@@ -114,6 +114,28 @@ class MeticulousAddon:
         self.mqtt_last_failed = False  # Track connection state for logging
         self.mqtt_connect_attempt = 0  # Track retry attempts
         self.mqtt_next_retry_time = 0.0  # Track when to retry MQTT
+        
+        # Fetch MQTT credentials from Supervisor if not provided in config
+        if self.mqtt_enabled and not (self.mqtt_username and self.mqtt_password):
+            self._fetch_mqtt_credentials_from_supervisor()
+
+    def _fetch_mqtt_credentials_from_supervisor(self):
+        """Fetch MQTT credentials from Home Assistant Supervisor Services API."""
+        try:
+            import requests
+            headers = {"Authorization": f"Bearer {self.supervisor_token}"}
+            response = requests.get("http://supervisor/services/mqtt", headers=headers, timeout=10)
+            if response.status_code == 200:
+                mqtt_service = response.json().get("data", {})
+                self.mqtt_host = mqtt_service.get("host", self.mqtt_host)
+                self.mqtt_port = mqtt_service.get("port", self.mqtt_port)
+                self.mqtt_username = mqtt_service.get("username")
+                self.mqtt_password = mqtt_service.get("password")
+                logger.info(f"Retrieved MQTT credentials from Supervisor: {self.mqtt_host}:{self.mqtt_port}")
+            else:
+                logger.warning(f"Failed to fetch MQTT credentials from Supervisor: {response.status_code}")
+        except Exception as e:
+            logger.warning(f"Could not fetch MQTT credentials from Supervisor: {e}")
 
     def _load_config(self) -> Dict[str, Any]:
         """Load add-on configuration from options.json."""
@@ -542,6 +564,18 @@ class MeticulousAddon:
         }
         return payload
 
+    def _mqtt_error_string(self, rc: int) -> str:
+        """Convert MQTT return code to human-readable string."""
+        errors = {
+            0: "Success",
+            1: "Incorrect protocol version",
+            2: "Invalid client identifier",
+            3: "Server unavailable",
+            4: "Bad username or password",
+            5: "Not authorized",
+        }
+        return errors.get(rc, f"Unknown error ({rc})")
+
     def _mqtt_connect(self) -> None:
         if not self.mqtt_enabled:
             return
@@ -553,7 +587,12 @@ class MeticulousAddon:
             # Set callbacks
             def on_connect(client, userdata, flags, rc):
                 if rc == 0:
-                    logger.debug(f"MQTT client connected with result code {rc}")
+                    logger.info(f"MQTT connected to {self.mqtt_host}:{self.mqtt_port}")
+                    # Subscribe to command topics after successful connection
+                    client.subscribe(f"{self.command_prefix}/#")
+                    logger.info(f"Subscribed to MQTT commands at {self.command_prefix}/#")
+                    # Mark online
+                    client.publish(self.availability_topic, payload="online", qos=0, retain=True)
                     # Publish discovery and initial state on successful connection
                     self._mqtt_publish_discovery()
                     if self.loop:
@@ -561,7 +600,8 @@ class MeticulousAddon:
                             self._mqtt_publish_initial_state(), self.loop
                         )
                 else:
-                    logger.warning(f"MQTT client failed to connect: {rc}")
+                    error_msg = self._mqtt_error_string(rc)
+                    logger.error(f"MQTT connection failed with code {rc}: {error_msg}")
 
             client.on_connect = on_connect
             client.on_message = lambda client, userdata, msg: mqtt_on_message(
@@ -571,19 +611,11 @@ class MeticulousAddon:
             client.will_set(self.availability_topic, payload="offline", qos=0, retain=True)
             if self.mqtt_username and self.mqtt_password:
                 client.username_pw_set(self.mqtt_username, self.mqtt_password)
-            
+
             client.loop_start()
             client.connect(self.mqtt_host, self.mqtt_port, keepalive=60)
-            
-            # Subscribe to command topics
-            client.subscribe(f"{self.command_prefix}/#")
-            logger.info(f"Subscribed to MQTT commands at {self.command_prefix}/#")
-            
-            # Mark online (will_set already done, but we can also publish immediately)
-            client.publish(self.availability_topic, payload="online", qos=0, retain=True)
-            
+
             self.mqtt_client = client
-            logger.info(f"MQTT connected to {self.mqtt_host}:{self.mqtt_port}")
             self.mqtt_last_failed = False  # Reset failure flag on success
         except Exception as e:
             self.mqtt_client = None
