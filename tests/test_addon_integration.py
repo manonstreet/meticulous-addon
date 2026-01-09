@@ -12,6 +12,11 @@ sys.path.insert(
 )
 
 
+# These imports will show as unresolved but work at runtime
+# due to dynamic path manipulation above
+# pyright: reportMissingImports=false
+
+
 class TestConfigLoading(unittest.TestCase):
     """Test configuration loading."""
 

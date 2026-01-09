@@ -13,7 +13,10 @@ sys.path.insert(
     os.path.join(os.path.dirname(__file__), '..', 'rootfs', 'usr', 'bin')
 )
 
-from mqtt_commands import (  # noqa: E402
+# These imports will show as unresolved but work at runtime
+# due to dynamic path manipulation above
+# pyright: reportMissingImports=false
+from mqtt_commands import (  # noqa: E402  # type: ignore
     mqtt_on_message,
     handle_command_start_brew,
     handle_command_stop_brew,
