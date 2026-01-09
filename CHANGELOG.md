@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.2.0] - 2026-01-08
+## [0.2.1] - 2026-01-08
+
+### Fixed
+- Unit tests pass consistently; safe async scheduling wrapper prevents event loop errors in tests.
+- Resolved Pylance issues by fixing multi-line f-strings and reducing long lines.
+
+### Added
+- Helper wrappers for MQTT discovery payloads and backoff calculation to align with tests.
+- CI lint workflow (flake8) to enforce style.
+
+### Changed
+- VS Code / Pyright configuration to improve import resolution in non-standard layout.
+
 
 ### Changed
 - Updated to use pyMeticulous 0.2.0 from PyPI (previously from git branch)
