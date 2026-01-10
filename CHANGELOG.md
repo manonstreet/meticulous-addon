@@ -1,6 +1,13 @@
 # Changelog
 
 All notable user-facing changes to this add-on are documented here.
+## [0.5.2] - 2026-01-09
+
+### Improvements
+- Profile selector now appears reliably on startup
+- Reduced unnecessary log messages
+- More efficient real-time updates (uses Socket.IO events instead of polling)
+
 ## [0.5.1] - 2026-01-09
 
 ### Bug Fix
