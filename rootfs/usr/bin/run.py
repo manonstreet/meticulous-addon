@@ -802,7 +802,7 @@ class MeticulousAddon:
                     self.available_profiles = {
                         p.get("id", p.get("name", "")): p.get("name", "Unknown") for p in profiles
                     }
-                    logger.debug(f"Fetched {len(self.available_profiles)} available profiles")
+                    logger.info(f"Fetched {len(self.available_profiles)} available profiles")
                     # Detect and log profile list changes
                     if old_profiles != self.available_profiles:
                         added = set(self.available_profiles.keys()) - set(old_profiles.keys())
@@ -817,7 +817,7 @@ class MeticulousAddon:
                             logger.debug("Republishing MQTT discovery with new profile list")
                             self._mqtt_publish_discovery()
         except Exception as e:
-            logger.debug(f"Error fetching available profiles: {e}")
+            logger.error(f"Error fetching available profiles: {e}", exc_info=True)
 
     # ---------------------------------------------------------------------
     # Test-facing helpers (wrappers) for discovery and backoff
