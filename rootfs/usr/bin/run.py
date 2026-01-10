@@ -1186,17 +1186,21 @@ class MeticulousAddon:
 
             profile = data.get("profile", {}) if isinstance(data, dict) else {}
 
-            self.current_profile = profile.get("name", self.current_profile)
+            new_profile_name = profile.get("name", "Unknown")
+            profile_changed = new_profile_name != self.current_profile
+
+            self.current_profile = new_profile_name
 
             profile_data = {
-                "active_profile": profile.get("name", "Unknown"),
+                "active_profile": new_profile_name,
                 "profile_author": profile.get("author"),
                 "target_temperature": profile.get("temperature"),
                 "target_weight": profile.get("final_weight"),
             }
 
             await self.publish_to_homeassistant(profile_data)
-            logger.info(f"Updated profile: {profile_data['active_profile']}")
+            if profile_changed:
+                logger.info(f"Profile changed to: {new_profile_name}")
 
         except Exception as e:
             logger.error(f"Error updating profile info: {e}", exc_info=True)
@@ -1319,8 +1323,9 @@ class MeticulousAddon:
                             # Schedule next retry
                             self.mqtt_next_retry_time = current_time + backoff
 
-                # Update profile info every 30 seconds
-                await self.update_profile_info()
+                # Only poll profile info if Socket.IO isn't connected (fallback mode)
+                if not self.socket_connected:
+                    await self.update_profile_info()
 
                 # Fetch available profiles periodically (every 5 minutes)
                 if self.api and not self.available_profiles:
