@@ -460,11 +460,6 @@ class MeticulousAddon:
                 "state_topic": f"{base}/last_shot_time/state",
                 "name": "Last Shot Time",
             },  # noqa: E501
-            "active_profile": {
-                "component": "sensor",
-                "state_topic": f"{base}/active_profile/state",
-                "name": "Active Profile",
-            },  # noqa: E501
             "profile_author": {
                 "component": "sensor",
                 "state_topic": f"{base}/profile_author/state",
@@ -655,9 +650,9 @@ class MeticulousAddon:
             self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
             logger.debug(f"Published {cmd_type} discovery for {object_id}")
 
-        # Publish profile selector if profiles are available
+        # Publish active_profile as select entity (combines sensor + selector)
         if self.available_profiles:
-            object_id = f"{self.slug}_profile_selector"
+            object_id = f"{self.slug}_active_profile"
             config_topic = f"{self.discovery_prefix}/select/{object_id}/config"
             payload: Dict[str, Any] = {
                 "name": "Active Profile",
@@ -671,7 +666,7 @@ class MeticulousAddon:
             }
             self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
             logger.debug(
-                f"Published profile selector discovery with {len(self.available_profiles)} options"
+                f"Published active profile selector with {len(self.available_profiles)} options"
             )
 
         total = len(self._mqtt_sensor_mapping()) + len(self._mqtt_command_mapping())

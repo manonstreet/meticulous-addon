@@ -1,6 +1,23 @@
 # Changelog
 
 All notable user-facing changes to this add-on are documented here.
+## [0.5.0] - 2026-01-09
+
+### 🎮 Full Machine Control in Home Assistant
+Your Meticulous machine is now fully controllable from Home Assistant! All essential brewing operations appear as buttons and controls.
+
+### ✨ New Features
+- **Brew Controls** - Start, stop, and continue brewing directly from Home Assistant
+- **Machine Operations** - Preheat your machine and tare the scale with dedicated buttons
+- **Settings** - Adjust brightness with a slider and toggle sounds on/off
+- **Profile Selector** - Switch between profiles with a simple dropdown (auto-updates when profiles are added/deleted)
+- **Real-time Updates** - Sensors update instantly when you interact with your machine (no more waiting for polling)
+
+### 🔧 Technical Improvements
+- Auto-refreshes profile list when profiles are added or deleted on the machine
+- Better error messaging when machine IP is not configured
+- More stable Socket.IO connection handling
+
 ## [0.4.3] - 2026-01-09
 
 ### Bug Fixes
