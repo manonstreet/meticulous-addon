@@ -270,6 +270,9 @@ class MeticulousAddon:
             await self.publish_device_info()
             await self.publish_connectivity(True)
 
+            # Fetch available profiles before MQTT discovery
+            await self.fetch_available_profiles()
+
             # MQTT connection will be handled in periodic_updates with proper retry logic
 
             return True
