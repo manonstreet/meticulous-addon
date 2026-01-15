@@ -584,16 +584,7 @@ class MeticulousAddon:
 
     def _mqtt_publish_discovery(self) -> None:
         if not (self.mqtt_enabled and self.mqtt_client):
-            logger.warning(
-                f"Cannot publish discovery: mqtt_enabled={self.mqtt_enabled}, "
-                f"mqtt_client={self.mqtt_client is not None}"
-            )
             return
-        if not self.mqtt_client.is_connected():
-            logger.warning("MQTT client is not connected; cannot publish discovery")
-            return
-        logger.info(f"Starting MQTT discovery publish (discovery_prefix={self.discovery_prefix})")
-        discovery_count = 0
         device = self._mqtt_device()
         for key, m in self._mqtt_sensor_mapping().items():
             # Remove active_profile from sensor discovery (only publish as select)
@@ -631,14 +622,7 @@ class MeticulousAddon:
                 payload["unit_of_meas"] = "g"
             elif key == "brightness":
                 payload["unit_of_meas"] = "%"
-            try:
-                self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
-                discovery_count += 1
-                logger.debug(f"Published discovery for {object_id} (topic={config_topic})")
-            except Exception as e:
-                logger.error(
-                    f"Failed to publish discovery for {object_id} on topic {config_topic}: {e}"
-                )
+            self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
 
         # Publish button/number/switch commands
         for key, cmd in self._mqtt_command_mapping().items():
@@ -661,14 +645,7 @@ class MeticulousAddon:
                     "max": cmd.get("max", 100),
                     "unit_of_meas": "%",
                 }
-                try:
-                    self.mqtt_client.publish(
-                        config_topic, jsonlib.dumps(payload), qos=0, retain=True
-                    )
-                    discovery_count += 1
-                    logger.debug(f"Published brightness number entity for {object_id}")
-                except Exception as e:
-                    logger.error(f"Failed to publish brightness number entity for {object_id}: {e}")
+                self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
                 continue
 
             if cmd_type == "number":
@@ -710,15 +687,7 @@ class MeticulousAddon:
                     "payload_press": "1",
                 }
 
-            try:
-                self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
-                discovery_count += 1
-                logger.debug(f"Published {cmd_type} discovery for {object_id}")
-            except Exception as e:
-                logger.error(
-                    f"Failed to publish {cmd_type} discovery for {object_id} "
-                    f"on topic {config_topic}: {e}"
-                )
+            self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
 
         # Publish active_profile as select entity (only, not as sensor)
         if self.available_profiles:
@@ -734,17 +703,9 @@ class MeticulousAddon:
                 "icon": "mdi:coffee",
                 "options": list(self.available_profiles.values()),
             }
-            try:
-                self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
-                discovery_count += 1
-                logger.debug(
-                    f"Published active profile selector with "
-                    f"{len(self.available_profiles)} options"
-                )
-            except Exception as e:
-                logger.error(f"Failed to publish active profile selector: {e}")
+            self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=0, retain=True)
 
-        logger.info(f"Published {discovery_count} MQTT discovery messages")
+        logger.info("Published MQTT discovery messages for all entities")
 
     async def _mqtt_publish_initial_state(self) -> None:
         """Fetch and publish initial state of all sensors (T0 snapshot).
@@ -1021,9 +982,12 @@ class MeticulousAddon:
                         asyncio.run_coroutine_threadsafe(
                             self._mqtt_publish_initial_state(), self.loop
                         )
+                    self.mqtt_last_failed = False  # Reset failure flag on success
                 else:
                     error_msg = self._mqtt_error_string(rc)
                     logger.error(f"MQTT connection failed with code {rc}: {error_msg}")
+                    # Mark connection as failed so next attempt will retry
+                    self.mqtt_client = None
 
             client.on_connect = on_connect
             client.on_message = lambda client, userdata, msg: mqtt_on_message(
@@ -1039,7 +1003,6 @@ class MeticulousAddon:
             client.connect(self.mqtt_host, self.mqtt_port, keepalive=60)
 
             self.mqtt_client = client
-            self.mqtt_last_failed = False  # Reset failure flag on success
         except Exception as e:
             self.mqtt_client = None
             # Only log at INFO level on first failure, subsequent retries at DEBUG
