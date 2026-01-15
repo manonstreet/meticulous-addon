@@ -1025,6 +1025,9 @@ class MeticulousAddon:
                 logger.info(f"on_connect callback fired: rc={rc}")
                 if rc == 0:
                     logger.info(f"MQTT connected to {self.mqtt_host}:{self.mqtt_port}")
+                    # Subscribe to homeassistant/# BEFORE publishing discovery (zigbee2mqtt pattern)
+                    client.subscribe(f"{self.discovery_prefix}/#")
+                    logger.info(f"Subscribed to MQTT discovery at {self.discovery_prefix}/#")
                     # Subscribe to command topics after successful connection
                     client.subscribe(f"{self.command_prefix}/#")
                     logger.info(f"Subscribed to MQTT commands at {self.command_prefix}/#")
