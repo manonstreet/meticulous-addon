@@ -2,6 +2,14 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.5.7] - 2026-01-15
+
+### 🐛 Bug Fixes
+- **CRITICAL**: Fixed MQTT Home Assistant discovery entities not appearing after add-on restart
+  - Root cause: Discovery messages were being queued before MQTT connection fully initialized
+  - Solution: Moved discovery publishing into on_connect callback to ensure it only publishes after connection confirmed
+  - Discovery entities will now properly appear in Home Assistant after any restart or reconnection
+
 ## [0.5.6] - 2026-01-15
 
 ### 🐛 Bug Fixes
