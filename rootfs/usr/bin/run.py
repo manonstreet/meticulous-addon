@@ -655,6 +655,13 @@ class MeticulousAddon:
                     payload["unit_of_measurement"] = "g"
                 elif key == "brightness":
                     payload["unit_of_measurement"] = "%"
+                elif key == "flow_rate":
+                    payload["unit_of_measurement"] = "ml/s"
+                elif key == "last_shot_time":
+                    payload["device_class"] = "timestamp"
+                elif key in ("firmware_version", "software_version", "state"):
+                    # These are generic string sensors, no specific device_class needed
+                    pass
 
                 # Log first sensor payload as example
                 if not sample_payload_logged:
@@ -715,9 +722,12 @@ class MeticulousAddon:
                 if cmd_type == "number":
                     component = "number"
                     config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
+                    # Number commands need a state_topic to show current value
+                    state_topic = f"{self.state_prefix}/{cmd['command_suffix']}/state"
                     payload: Dict[str, Any] = {
                         "name": cmd["name"],
                         "unique_id": object_id,
+                        "state_topic": state_topic,
                         "command_topic": f"{self.command_prefix}/{cmd['command_suffix']}",
                         "availability_topic": self.availability_topic,
                         "device": device,
