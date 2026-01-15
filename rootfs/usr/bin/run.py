@@ -1545,8 +1545,8 @@ class MeticulousAddon:
                             self.mqtt_client.publish(
                                 f"{self.state_prefix}/firmware_update_available/state",
                                 str(available).lower(),
-                                qos=0,
-                                retain=False,
+                                qos=1,
+                                retain=True,
                             )
                             logger.debug(f"Published firmware update availability: {available}")
                         except Exception as e:
