@@ -2,6 +2,12 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.5.6] - 2026-01-15
+
+### 🐛 Bug Fixes
+- Fixed MQTT discovery messages not reaching broker by adding message delivery confirmation
+- Added diagnostic logging for MQTT connection and publish failures
+
 ## [0.5.5] - 2026-01-15
 
 ### 🐛 Bug Fixes
