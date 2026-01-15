@@ -17,6 +17,12 @@ def mqtt_on_message(addon: "MeticulousAddon", client, userdata, msg):
     """Handle incoming MQTT messages for commands."""
     try:
         topic = msg.topic
+
+        # Ignore messages from homeassistant/# (discovery) and only process command messages
+        if not topic.startswith(f"{addon.command_prefix}/"):
+            logger.debug(f"Ignoring non-command MQTT message: {topic}")
+            return
+
         payload = msg.payload.decode("utf-8")
         logger.debug(f"MQTT command received: {topic} = {payload}")
 

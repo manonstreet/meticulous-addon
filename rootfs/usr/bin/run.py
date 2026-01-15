@@ -619,7 +619,22 @@ class MeticulousAddon:
                     "device": device,
                 }
 
-                if key in (
+                # Add device_class and other fields based on sensor type
+                if component == "binary_sensor":
+                    # Binary sensors need device_class or explicit payload mappings
+                    if key == "connected":
+                        payload["device_class"] = "connectivity"
+                    elif key == "brewing":
+                        payload["device_class"] = "running"
+                    elif key == "sounds_enabled":
+                        payload["device_class"] = "switch"
+                    elif key == "firmware_update_available":
+                        payload["device_class"] = "update"
+                    else:
+                        # For other binary sensors, explicitly set payload values
+                        payload["payload_on"] = "true"
+                        payload["payload_off"] = "false"
+                elif key in (
                     "boiler_temperature",
                     "brew_head_temperature",
                     "target_temperature",
