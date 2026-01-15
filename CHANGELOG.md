@@ -2,6 +2,13 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.5.20] - 2026-01-15
+
+### 🔧 Improvements
+- Fixed MQTT device discovery grouping by excluding null fields from device block
+- Removed `null` values for optional device fields (`sw_version`, `hw_version`) to match Home Assistant device schema expectations
+- Ensures all entity discovery configs are recognized as belonging to the same device
+
 ## [0.5.19] - 2026-01-15
 
 ### 🔧 Improvements

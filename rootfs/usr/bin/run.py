@@ -576,14 +576,20 @@ class MeticulousAddon:
         identifiers = [self.slug]
         if info and getattr(info, "serial", None):
             identifiers.append(info.serial)
-        return {
+        device = {
             "identifiers": identifiers,
             "manufacturer": "Meticulous",
             "model": getattr(info, "model", "Espresso") if info else "Espresso",
             "name": "Meticulous Espresso",
-            "sw_version": getattr(info, "software_version", None) if info else None,
-            "hw_version": getattr(info, "model", None) if info else None,
         }
+        # Only include optional fields if they have values
+        sw_version = getattr(info, "software_version", None) if info else None
+        if sw_version:
+            device["sw_version"] = sw_version
+        hw_version = getattr(info, "model", None) if info else None
+        if hw_version:
+            device["hw_version"] = hw_version
+        return device
 
     async def _mqtt_publish_discovery(self) -> None:
         """Publish Home Assistant MQTT discovery configs using QoS 1."""
