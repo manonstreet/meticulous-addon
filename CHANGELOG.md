@@ -13,6 +13,11 @@ All notable user-facing changes to this add-on are documented here.
 ### 🐛 Bug Fixes
 - Fixed MQTT discovery messages not reaching Home Assistant broker
 
+## [0.5.6] - 2026-01-15
+
+### 🐛 Bug Fixes
+- Improved MQTT message delivery confirmation and diagnostics
+
 ## [0.5.5] - 2026-01-15
 
 ### 🐛 Bug Fixes
