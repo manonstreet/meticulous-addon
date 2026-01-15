@@ -2,6 +2,14 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.5.19] - 2026-01-15
+
+### 🔧 Improvements
+- Corrected MQTT discovery payload field names to match Home Assistant spec exactly
+- Changed `uniq_id` to `unique_id` (critical fix for HA discovery acceptance)
+- Replaced abbreviated field names with full names for clarity: `stat_t` → `state_topic`, `cmd_t` → `command_topic`, `avty_t` → `availability_topic`, `dev_cla` → `device_class`, `unit_of_meas` → `unit_of_measurement`
+- Home Assistant now properly processes and recognizes discovery messages
+
 ## [0.5.18] - 2026-01-15
 
 ### 🔧 Improvements
