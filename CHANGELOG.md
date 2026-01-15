@@ -2,6 +2,19 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.5.17] - 2026-01-15
+
+### ⚡ Performance
+- Reduced MQTT discovery latency from ~5 minutes to ~0.5 seconds after connection
+- Restructured periodic_updates loop to check discovery flag frequently without blocking API refresh schedule
+- Discovery now publishes immediately after MQTT connection handshake completes
+
+## [0.5.16] - 2026-01-15
+
+### 🐛 Bug Fixes
+- Fixed MQTT discovery device name inconsistency causing potential conflicts
+- Now uses fixed device name "Meticulous Espresso" for reliable Home Assistant discovery
+
 ## [0.5.15] - 2026-01-15
 
 ### 🔧 Improvements

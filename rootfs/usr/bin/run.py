@@ -7,6 +7,7 @@ import logging
 import os
 import random
 import sys
+import time
 import warnings
 from datetime import datetime
 from typing import Any, Dict, Optional
@@ -1417,16 +1418,17 @@ class MeticulousAddon:
         """Perform periodic polling updates for non-real-time data.
 
         All sensors are heartbeat-refreshed from the API every refresh_rate_minutes (default: 5).
+        Discovery is checked frequently (every 0.5s) to minimize latency after MQTT connects.
         """
         # Initial delay to let Socket.IO establish
         await asyncio.sleep(10)
+
+        last_periodic_update = time.time()
 
         while self.running:
             try:
                 # Retry MQTT connection if not connected with exponential backoff
                 if self.mqtt_enabled and not self.mqtt_client:
-                    import time
-
                     current_time = time.time()
                     if current_time >= self.mqtt_next_retry_time:
                         self.mqtt_connect_attempt += 1
@@ -1445,38 +1447,7 @@ class MeticulousAddon:
                             # Schedule next retry
                             self.mqtt_next_retry_time = current_time + backoff
 
-                # Only poll profile info if Socket.IO isn't connected (fallback mode)
-                if not self.socket_connected:
-                    await self.update_profile_info()
-
-                # Fetch available profiles periodically (every refresh)
-                if self.api and not self.available_profiles:
-                    await self.fetch_available_profiles()
-
-                # Update settings (brightness, sounds)
-                await self.update_settings()
-
-                # Update statistics
-                await self.update_statistics()
-
-                # Update firmware update availability sensor
-                if self.api and self.mqtt_enabled and self.mqtt_client:
-                    try:
-                        update_status = self.api.check_for_updates()
-                        available = False
-                        if update_status and not isinstance(update_status, APIError):
-                            available = getattr(update_status, "available", False)
-                        self.mqtt_client.publish(
-                            f"{self.state_prefix}/firmware_update_available/state",
-                            str(available).lower(),
-                            qos=0,
-                            retain=False,
-                        )
-                        logger.debug(f"Published firmware update availability: {available}")
-                    except Exception as e:
-                        logger.debug(f"Could not update firmware update sensor: {e}")
-
-                # Publish discovery if pending and client is connected
+                # Check discovery flag frequently (don't wait for 5-minute refresh cycle)
                 if self.mqtt_discovery_pending and self.mqtt_enabled and self.mqtt_client:
                     is_connected = self.mqtt_client.is_connected() if self.mqtt_client else False
                     logger.info(
@@ -1498,11 +1469,49 @@ class MeticulousAddon:
                         f"client={self.mqtt_client is not None}"
                     )
 
-                # Publish health metrics
-                await self.publish_health_metrics()
+                # Perform full periodic updates on schedule (every scan_interval seconds)
+                current_time = time.time()
+                time_since_last_update = current_time - last_periodic_update
 
-                # Wait for next update cycle (heartbeat refresh)
-                await asyncio.sleep(self.scan_interval)
+                if time_since_last_update >= self.scan_interval:
+                    # Only poll profile info if Socket.IO isn't connected (fallback mode)
+                    if not self.socket_connected:
+                        await self.update_profile_info()
+
+                    # Fetch available profiles periodically (every refresh)
+                    if self.api and not self.available_profiles:
+                        await self.fetch_available_profiles()
+
+                    # Update settings (brightness, sounds)
+                    await self.update_settings()
+
+                    # Update statistics
+                    await self.update_statistics()
+
+                    # Update firmware update availability sensor
+                    if self.api and self.mqtt_enabled and self.mqtt_client:
+                        try:
+                            update_status = self.api.check_for_updates()
+                            available = False
+                            if update_status and not isinstance(update_status, APIError):
+                                available = getattr(update_status, "available", False)
+                            self.mqtt_client.publish(
+                                f"{self.state_prefix}/firmware_update_available/state",
+                                str(available).lower(),
+                                qos=0,
+                                retain=False,
+                            )
+                            logger.debug(f"Published firmware update availability: {available}")
+                        except Exception as e:
+                            logger.debug(f"Could not update firmware update sensor: {e}")
+
+                    # Publish health metrics
+                    await self.publish_health_metrics()
+
+                    last_periodic_update = current_time
+
+                # Sleep briefly to allow responsive discovery checks without blocking
+                await asyncio.sleep(0.5)
 
             except Exception as e:
                 logger.error(f"Error in periodic updates: {e}", exc_info=True)
