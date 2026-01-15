@@ -366,7 +366,8 @@ class MeticulousAddon:
                     payload = (
                         str(value) if not isinstance(value, (dict, list)) else jsonlib.dumps(value)
                     )
-                    self.mqtt_client.publish(topic, payload, qos=0, retain=False)
+                    # Publish state with QoS 1 and retain=True for reliability
+                    self.mqtt_client.publish(topic, payload, qos=1, retain=True)
                     published_count += 1
                 if published_count > 0:
                     logger.debug(f"Published {published_count} MQTT state updates")
