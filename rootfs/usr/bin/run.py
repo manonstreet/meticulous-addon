@@ -613,10 +613,10 @@ class MeticulousAddon:
                 config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
                 payload: Dict[str, Any] = {
                     "name": m["name"],
-                    "uniq_id": object_id,
-                    "stat_t": m["state_topic"],
-                    "avty_t": self.availability_topic,
-                    "dev": device,
+                    "unique_id": object_id,
+                    "state_topic": m["state_topic"],
+                    "availability_topic": self.availability_topic,
+                    "device": device,
                 }
 
                 if key in (
@@ -626,20 +626,20 @@ class MeticulousAddon:
                     "external_temp_1",
                     "external_temp_2",
                 ):
-                    payload["dev_cla"] = "temperature"
-                    payload["unit_of_meas"] = "°C"
+                    payload["device_class"] = "temperature"
+                    payload["unit_of_measurement"] = "°C"
                 elif key == "pressure":
-                    payload["dev_cla"] = "pressure"
-                    payload["unit_of_meas"] = "bar"
+                    payload["device_class"] = "pressure"
+                    payload["unit_of_measurement"] = "bar"
                 elif key == "voltage":
-                    payload["dev_cla"] = "voltage"
-                    payload["unit_of_meas"] = "V"
+                    payload["device_class"] = "voltage"
+                    payload["unit_of_measurement"] = "V"
                 elif key == "shot_timer":
-                    payload["unit_of_meas"] = "s"
+                    payload["unit_of_measurement"] = "s"
                 elif key in ("shot_weight", "target_weight"):
-                    payload["unit_of_meas"] = "g"
+                    payload["unit_of_measurement"] = "g"
                 elif key == "brightness":
-                    payload["unit_of_meas"] = "%"
+                    payload["unit_of_measurement"] = "%"
 
                 # Log first sensor payload as example
                 if not sample_payload_logged:
@@ -671,15 +671,15 @@ class MeticulousAddon:
                     config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
                     payload: Dict[str, Any] = {
                         "name": "Brightness",
-                        "uniq_id": object_id,
-                        "stat_t": f"{self.state_prefix}/brightness/state",
-                        "cmd_t": f"{self.command_prefix}/set_brightness",
-                        "avty_t": self.availability_topic,
-                        "dev": device,
+                        "unique_id": object_id,
+                        "state_topic": f"{self.state_prefix}/brightness/state",
+                        "command_topic": f"{self.command_prefix}/set_brightness",
+                        "availability_topic": self.availability_topic,
+                        "device": device,
                         "icon": cmd["icon"],
                         "min": cmd.get("min", 0),
                         "max": cmd.get("max", 100),
-                        "unit_of_meas": "%",
+                        "unit_of_measurement": "%",
                     }
                     # Log first command payload as example
                     if not sample_cmd_logged:
@@ -702,10 +702,10 @@ class MeticulousAddon:
                     config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
                     payload: Dict[str, Any] = {
                         "name": cmd["name"],
-                        "uniq_id": object_id,
-                        "cmd_t": f"{self.command_prefix}/{cmd['command_suffix']}",
-                        "avty_t": self.availability_topic,
-                        "dev": device,
+                        "unique_id": object_id,
+                        "command_topic": f"{self.command_prefix}/{cmd['command_suffix']}",
+                        "availability_topic": self.availability_topic,
+                        "device": device,
                         "icon": cmd["icon"],
                         "min": cmd.get("min", 0),
                         "max": cmd.get("max", 100),
@@ -715,10 +715,10 @@ class MeticulousAddon:
                     config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
                     payload: Dict[str, Any] = {
                         "name": cmd["name"],
-                        "uniq_id": object_id,
-                        "cmd_t": f"{self.command_prefix}/{cmd['command_suffix']}",
-                        "avty_t": self.availability_topic,
-                        "dev": device,
+                        "unique_id": object_id,
+                        "command_topic": f"{self.command_prefix}/{cmd['command_suffix']}",
+                        "availability_topic": self.availability_topic,
+                        "device": device,
                         "icon": cmd["icon"],
                         "payload_on": "true",
                         "payload_off": "false",
@@ -728,10 +728,10 @@ class MeticulousAddon:
                     config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
                     payload: Dict[str, Any] = {
                         "name": cmd["name"],
-                        "uniq_id": object_id,
-                        "cmd_t": f"{self.command_prefix}/{cmd['command_suffix']}",
-                        "avty_t": self.availability_topic,
-                        "dev": device,
+                        "unique_id": object_id,
+                        "command_topic": f"{self.command_prefix}/{cmd['command_suffix']}",
+                        "availability_topic": self.availability_topic,
+                        "device": device,
                         "icon": cmd["icon"],
                         "payload_press": "1",
                     }
@@ -753,11 +753,11 @@ class MeticulousAddon:
                 config_topic = f"{self.discovery_prefix}/select/{object_id}/config"
                 payload: Dict[str, Any] = {
                     "name": "Active Profile",
-                    "uniq_id": object_id,
-                    "cmd_t": f"{self.command_prefix}/load_profile",
-                    "stat_t": f"{self.state_prefix}/active_profile/state",
-                    "avty_t": self.availability_topic,
-                    "dev": device,
+                    "unique_id": object_id,
+                    "command_topic": f"{self.command_prefix}/load_profile",
+                    "state_topic": f"{self.state_prefix}/active_profile/state",
+                    "availability_topic": self.availability_topic,
+                    "device": device,
                     "icon": "mdi:coffee",
                     "options": list(self.available_profiles.values()),
                 }
