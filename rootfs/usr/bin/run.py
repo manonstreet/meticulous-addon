@@ -583,163 +583,176 @@ class MeticulousAddon:
             "hw_version": getattr(info, "model", None),
         }
 
-    def _mqtt_publish_discovery(self) -> None:
+    async def _mqtt_publish_discovery(self) -> None:
+        """Publish Home Assistant MQTT discovery configs using QoS 1."""
         if not (self.mqtt_enabled and self.mqtt_client):
             logger.debug("Skipping discovery publish: mqtt not ready")
             return
-        logger.info("Publishing MQTT Home Assistant discovery configs")
+
+        logger.info("Starting MQTT Home Assistant discovery publish")
         is_connected = self.mqtt_client.is_connected()
-        logger.info(f"Client connection state at discovery start: is_connected={is_connected}")
+        logger.info(f"Client connection at start: is_connected={is_connected}")
+
         if not is_connected:
-            logger.error(
-                "MQTT client not connected at discovery start - aborting discovery publish"
-            )
+            logger.error("MQTT not connected - aborting discovery")
             return
 
         discovery_count = 0
         device = self._mqtt_device()
-        for key, m in self._mqtt_sensor_mapping().items():
-            # Remove active_profile from sensor discovery (only publish as select)
-            if key == "active_profile":
-                continue
-            component = m["component"]
-            object_id = f"{self.slug}_{key}"
-            config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
-            payload: Dict[str, Any] = {
-                "name": m["name"],
-                "uniq_id": object_id,
-                "stat_t": m["state_topic"],
-                "avty_t": self.availability_topic,
-                "dev": device,
-            }
-            temp_keys = (
-                "boiler_temperature",
-                "brew_head_temperature",
-                "target_temperature",
-                "external_temp_1",
-                "external_temp_2",
-            )
-            if key in temp_keys:
-                payload["dev_cla"] = "temperature"
-                payload["unit_of_meas"] = "°C"
-            elif key == "pressure":
-                payload["dev_cla"] = "pressure"
-                payload["unit_of_meas"] = "bar"
-            elif key == "voltage":
-                payload["dev_cla"] = "voltage"
-                payload["unit_of_meas"] = "V"
-            elif key == "shot_timer":
-                payload["unit_of_meas"] = "s"
-            elif key == "shot_weight" or key == "target_weight":
-                payload["unit_of_meas"] = "g"
-            elif key == "brightness":
-                payload["unit_of_meas"] = "%"
-            result = self.mqtt_client.publish(
-                config_topic, jsonlib.dumps(payload), qos=0, retain=True
-            )
-            discovery_count += 1
-            conn_state = self.mqtt_client.is_connected()
-            logger.debug(
-                f"Published {key} to {config_topic}: rc={result.rc}, is_connected={conn_state}"
-            )
 
-        # Publish button/number/switch commands
-        for key, cmd in self._mqtt_command_mapping().items():
-            object_id = f"{self.slug}_{key}"
-            cmd_type = cmd.get("type", "button")
+        try:
+            # Publish sensor discoveries
+            for key, m in self._mqtt_sensor_mapping().items():
+                if key == "active_profile":
+                    continue
 
-            if key == "set_brightness":
-                # Publish brightness as a number entity (combined sensor/control)
-                component = "number"
+                component = m["component"]
+                object_id = f"{self.slug}_{key}"
                 config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
                 payload: Dict[str, Any] = {
-                    "name": "Brightness",
+                    "name": m["name"],
                     "uniq_id": object_id,
-                    "stat_t": f"{self.state_prefix}/brightness/state",
-                    "cmd_t": f"{self.command_prefix}/set_brightness",
+                    "stat_t": m["state_topic"],
                     "avty_t": self.availability_topic,
                     "dev": device,
-                    "icon": cmd["icon"],
-                    "min": cmd.get("min", 0),
-                    "max": cmd.get("max", 100),
-                    "unit_of_meas": "%",
                 }
+
+                if key in (
+                    "boiler_temperature",
+                    "brew_head_temperature",
+                    "target_temperature",
+                    "external_temp_1",
+                    "external_temp_2",
+                ):
+                    payload["dev_cla"] = "temperature"
+                    payload["unit_of_meas"] = "°C"
+                elif key == "pressure":
+                    payload["dev_cla"] = "pressure"
+                    payload["unit_of_meas"] = "bar"
+                elif key == "voltage":
+                    payload["dev_cla"] = "voltage"
+                    payload["unit_of_meas"] = "V"
+                elif key == "shot_timer":
+                    payload["unit_of_meas"] = "s"
+                elif key in ("shot_weight", "target_weight"):
+                    payload["unit_of_meas"] = "g"
+                elif key == "brightness":
+                    payload["unit_of_meas"] = "%"
+
                 result = self.mqtt_client.publish(
-                    config_topic, jsonlib.dumps(payload), qos=0, retain=True
+                    config_topic, jsonlib.dumps(payload), qos=1, retain=True
                 )
                 discovery_count += 1
-                logger.debug(f"Published {key} brightness number to {config_topic}: rc={result.rc}")
-                continue
+                logger.info(f"Sensor {key}: rc={result.rc}")
+                await asyncio.sleep(0.01)  # Small yield to event loop
+        except Exception as e:
+            logger.error(f"Error in sensor discovery: {e}", exc_info=True)
+            return
 
-            if cmd_type == "number":
-                component = "number"
-                config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
+        try:
+            # Publish command discoveries
+            for key, cmd in self._mqtt_command_mapping().items():
+                object_id = f"{self.slug}_{key}"
+                cmd_type = cmd.get("type", "button")
+
+                if key == "set_brightness":
+                    component = "number"
+                    config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
+                    payload: Dict[str, Any] = {
+                        "name": "Brightness",
+                        "uniq_id": object_id,
+                        "stat_t": f"{self.state_prefix}/brightness/state",
+                        "cmd_t": f"{self.command_prefix}/set_brightness",
+                        "avty_t": self.availability_topic,
+                        "dev": device,
+                        "icon": cmd["icon"],
+                        "min": cmd.get("min", 0),
+                        "max": cmd.get("max", 100),
+                        "unit_of_meas": "%",
+                    }
+                    result = self.mqtt_client.publish(
+                        config_topic, jsonlib.dumps(payload), qos=1, retain=True
+                    )
+                    discovery_count += 1
+                    logger.info(f"Brightness command: rc={result.rc}")
+                    await asyncio.sleep(0.01)
+                    continue
+
+                if cmd_type == "number":
+                    component = "number"
+                    config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
+                    payload: Dict[str, Any] = {
+                        "name": cmd["name"],
+                        "uniq_id": object_id,
+                        "cmd_t": f"{self.command_prefix}/{cmd['command_suffix']}",
+                        "avty_t": self.availability_topic,
+                        "dev": device,
+                        "icon": cmd["icon"],
+                        "min": cmd.get("min", 0),
+                        "max": cmd.get("max", 100),
+                    }
+                elif cmd_type == "switch":
+                    component = "switch"
+                    config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
+                    payload: Dict[str, Any] = {
+                        "name": cmd["name"],
+                        "uniq_id": object_id,
+                        "cmd_t": f"{self.command_prefix}/{cmd['command_suffix']}",
+                        "avty_t": self.availability_topic,
+                        "dev": device,
+                        "icon": cmd["icon"],
+                        "payload_on": "true",
+                        "payload_off": "false",
+                    }
+                else:  # button
+                    component = "button"
+                    config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
+                    payload: Dict[str, Any] = {
+                        "name": cmd["name"],
+                        "uniq_id": object_id,
+                        "cmd_t": f"{self.command_prefix}/{cmd['command_suffix']}",
+                        "avty_t": self.availability_topic,
+                        "dev": device,
+                        "icon": cmd["icon"],
+                        "payload_press": "1",
+                    }
+
+                result = self.mqtt_client.publish(
+                    config_topic, jsonlib.dumps(payload), qos=1, retain=True
+                )
+                discovery_count += 1
+                logger.info(f"Command {key}: rc={result.rc}")
+                await asyncio.sleep(0.01)
+        except Exception as e:
+            logger.error(f"Error in command discovery: {e}", exc_info=True)
+            return
+
+        try:
+            # Publish active_profile select
+            if self.available_profiles:
+                object_id = f"{self.slug}_active_profile"
+                config_topic = f"{self.discovery_prefix}/select/{object_id}/config"
                 payload: Dict[str, Any] = {
-                    "name": cmd["name"],
+                    "name": "Active Profile",
                     "uniq_id": object_id,
-                    "cmd_t": f"{self.command_prefix}/{cmd['command_suffix']}",
+                    "cmd_t": f"{self.command_prefix}/load_profile",
+                    "stat_t": f"{self.state_prefix}/active_profile/state",
                     "avty_t": self.availability_topic,
                     "dev": device,
-                    "icon": cmd["icon"],
-                    "min": cmd.get("min", 0),
-                    "max": cmd.get("max", 100),
+                    "icon": "mdi:coffee",
+                    "options": list(self.available_profiles.values()),
                 }
-            elif cmd_type == "switch":
-                component = "switch"
-                config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
-                payload: Dict[str, Any] = {
-                    "name": cmd["name"],
-                    "uniq_id": object_id,
-                    "cmd_t": f"{self.command_prefix}/{cmd['command_suffix']}",
-                    "avty_t": self.availability_topic,
-                    "dev": device,
-                    "icon": cmd["icon"],
-                    "payload_on": "true",
-                    "payload_off": "false",
-                }
-            else:  # button
-                component = "button"
-                config_topic = f"{self.discovery_prefix}/{component}/{object_id}/config"
-                payload: Dict[str, Any] = {
-                    "name": cmd["name"],
-                    "uniq_id": object_id,
-                    "cmd_t": f"{self.command_prefix}/{cmd['command_suffix']}",
-                    "avty_t": self.availability_topic,
-                    "dev": device,
-                    "icon": cmd["icon"],
-                    "payload_press": "1",
-                }
+                result = self.mqtt_client.publish(
+                    config_topic, jsonlib.dumps(payload), qos=1, retain=True
+                )
+                discovery_count += 1
+                logger.info(f"Active profile: rc={result.rc}")
+                await asyncio.sleep(0.01)
+        except Exception as e:
+            logger.error(f"Error in profile discovery: {e}", exc_info=True)
+            return
 
-            result = self.mqtt_client.publish(
-                config_topic, jsonlib.dumps(payload), qos=0, retain=True
-            )
-            discovery_count += 1
-            logger.debug(f"Published {key} ({cmd_type}) command to {config_topic}: rc={result.rc}")
-
-        # Publish active_profile as select entity (only, not as sensor)
-        if self.available_profiles:
-            object_id = f"{self.slug}_active_profile"
-            config_topic = f"{self.discovery_prefix}/select/{object_id}/config"
-            payload: Dict[str, Any] = {
-                "name": "Active Profile",
-                "uniq_id": object_id,
-                "cmd_t": f"{self.command_prefix}/load_profile",
-                "stat_t": f"{self.state_prefix}/active_profile/state",
-                "avty_t": self.availability_topic,
-                "dev": device,
-                "icon": "mdi:coffee",
-                "options": list(self.available_profiles.values()),
-            }
-            result = self.mqtt_client.publish(
-                config_topic, jsonlib.dumps(payload), qos=0, retain=True
-            )
-            discovery_count += 1
-            logger.debug(f"Published active_profile to {config_topic}: rc={result.rc}")
-
-        final_connected = self.mqtt_client.is_connected()
-        logger.info(
-            f"Published {discovery_count} discovery messages, final is_connected={final_connected}"
-        )
+        logger.info(f"Discovery complete: published {discovery_count} configs with QoS 1")
 
     async def _mqtt_publish_initial_state(self) -> None:
         """Fetch and publish initial state of all sensors (T0 snapshot).
@@ -898,7 +911,7 @@ class MeticulousAddon:
                     # Republish discovery with updated profile options
                     if self.mqtt_client:
                         logger.debug("Republishing MQTT discovery with new profile list")
-                        self._mqtt_publish_discovery()
+                        await self._mqtt_publish_discovery()
         except Exception as e:
             logger.error(f"Error fetching available profiles: {e}", exc_info=True)
 
@@ -1468,7 +1481,7 @@ class MeticulousAddon:
                     try:
                         # Wait for connection to fully handshake with broker
                         await asyncio.sleep(1.0)
-                        self._mqtt_publish_discovery()
+                        await self._mqtt_publish_discovery()
                         self.mqtt_discovery_pending = False
                     except Exception as e:
                         logger.error(f"Error publishing MQTT discovery: {e}", exc_info=True)
