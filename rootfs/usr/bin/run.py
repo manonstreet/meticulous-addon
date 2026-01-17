@@ -977,6 +977,13 @@ class MeticulousAddon:
                         initial_data["profile_author"] = getattr(profile, "author", None)
                         initial_data["target_temperature"] = getattr(profile, "temperature", None)
                         initial_data["target_weight"] = getattr(profile, "final_weight", None)
+
+                        # Publish active profile state to SELECT entity immediately
+                        if self.mqtt_enabled and self.mqtt_client:
+                            state_topic = f"{self.state_prefix}/active_profile/state"
+                            self.mqtt_client.publish(state_topic, profile_name, qos=1, retain=True)
+                            logger.info(f"Published active_profile state: {profile_name}")
+
             except Exception as e:
                 logger.debug(f"Could not fetch initial profile: {e}")
 
@@ -1563,6 +1570,12 @@ class MeticulousAddon:
                 "target_temperature": getattr(profile, "temperature", None),
                 "target_weight": getattr(profile, "final_weight", None),
             }
+
+            # Publish active profile state to SELECT entity immediately
+            if self.mqtt_enabled and self.mqtt_client:
+                state_topic = f"{self.state_prefix}/active_profile/state"
+                self.mqtt_client.publish(state_topic, new_profile_name, qos=1, retain=True)
+                logger.info(f"Published active_profile state: {new_profile_name}")
 
             await self.publish_to_homeassistant(profile_data)
             if profile_changed:
