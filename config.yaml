@@ -39,7 +39,6 @@ options:
   weight_delta: 0.1
   time_delta: 0.1
   voltage_delta: 1.0
-  brightness_delta: 1
   stale_data_refresh_interval: 24
   debug: false
   mqtt_enabled: true
@@ -56,7 +55,6 @@ schema:
   weight_delta: float(0,10)?
   time_delta: float(0,10)?
   voltage_delta: float(0,50)?
-  brightness_delta: float(0,50)?
   stale_data_refresh_interval: int(1,168)?
   debug: bool?
   mqtt_enabled: bool?

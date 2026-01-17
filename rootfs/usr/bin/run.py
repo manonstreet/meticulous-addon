@@ -96,7 +96,6 @@ class MeticulousAddon:
             "target_pressure": pressure_delta,
             "target_flow": flow_delta,
             "voltage": float(self.config.get("voltage_delta", 1.0)),
-            "brightness": float(self.config.get("brightness_delta", 1.0)),
         }
         # String/Boolean/Timestamp sensors - exact match filtering
         self.exact_match_sensors = {
@@ -641,9 +640,6 @@ class MeticulousAddon:
             sample_payload_logged = False
             for key, m in self._mqtt_sensor_mapping().items():
                 if key == "active_profile":
-                    continue
-                # Skip brightness - it's controlled via set_brightness command
-                if key == "brightness":
                     continue
 
                 component = m["component"]
