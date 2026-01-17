@@ -920,7 +920,9 @@ class MeticulousAddon:
                     logger.debug(f"Could not fetch initial last shot: {e}")
                     initial_data["last_shot_time"] = None
 
-                # Firmware update availability sensor - MUST fetch
+                # Firmware update availability sensor
+                # Infer false if we can't fetch (safe: assume no update available)
+                initial_data["firmware_update_available"] = False
                 try:
                     update_status = api.check_for_updates()
                     if update_status and not isinstance(update_status, APIError):
@@ -993,9 +995,10 @@ class MeticulousAddon:
         # Note: Status (state, sensors, temperatures) only available via Socket.IO
         # These will be updated by real-time events after connection
 
-        # Connectivity and brewing state (defaults for initial state)
+        # Connectivity and brewing state (inferred defaults)
         initial_data["connected"] = self.socket_connected
-        initial_data["brewing"] = False  # Default to not brewing until Socket.IO event received
+        # Infer brewing false (safe: machine idle until Socket.IO indicates otherwise)
+        initial_data["brewing"] = False
 
         # Publish all available initial state
         await self.publish_to_homeassistant(initial_data)
