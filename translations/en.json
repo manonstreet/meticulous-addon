@@ -10,7 +10,7 @@
     },
     "stale_data_refresh_interval": {
       "name": "Stale Data Refresh Interval",
-      "description": "Force a full refresh of all sensor data after this time with no updates (in hours, 1-168). Default 24 hours. Ensures no data gets stuck if Socket.IO stops sending updates."
+      "description": "Force a full refresh of all sensor data after this time with no updates (in hours, 1-168). Default 24 hours. Ensures non-chatty sensors (settings, statistics, profile info) are periodically refreshed so Home Assistant doesn't forget them."
     },
     "debug": {
       "name": "Debug Mode",
