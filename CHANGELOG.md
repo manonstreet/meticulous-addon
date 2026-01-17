@@ -2,6 +2,19 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.5.23] - 2026-01-17
+
+### 🐛 Bug Fixes
+- **Fixed Active Profile dropdown** - Profile selector now shows the currently selected profile when you open Home Assistant
+- **Improved sensor initial state** - All sensor values are now properly fetched from the machine during startup (instead of showing "unknown")
+  - Firmware updates availability is properly detected (or inferred as unavailable if check fails)
+  - Last shot time always shows a real value from your machine's history
+  - Profile information (author, target temperature, target weight) loads immediately
+- **Fixed Sounds control** - Sounds on/off toggle now appears correctly in Home Assistant
+- **Fixed Brightness control** - Brightness slider now appears correctly in Home Assistant
+- **Removed redundant sensor** - Consolidated duplicate profile information for cleaner Home Assistant interface
+- **Graceful shutdown** - Add-on now properly notifies Home Assistant when shutting down (sets connected to false)
+
 ## [0.5.22] - 2026-01-17
 
 ### 🐛 Bug Fixes
