@@ -885,20 +885,26 @@ class MeticulousAddon:
                 if stats and not isinstance(stats, APIError):
                     initial_data["total_shots"] = stats.totalSavedShots
 
-                # Also get last shot info
+                # Also get last shot info - only publish if successfully fetched
                 try:
                     last_shot = api.get_last_shot()
                     if last_shot and not isinstance(last_shot, APIError):
-                        initial_data["last_shot_name"] = getattr(last_shot, "name", None)
+                        # Only publish if we got real data
+                        shot_name = getattr(last_shot, "name", None)
+                        if shot_name:
+                            initial_data["last_shot_name"] = shot_name
+
+                        # Only include profile if present
                         if hasattr(last_shot, "profile"):
-                            initial_data["last_shot_profile"] = getattr(
-                                last_shot.profile, "name", None
-                            )
-                        else:
-                            initial_data["last_shot_profile"] = None
+                            profile_name = getattr(last_shot.profile, "name", None)
+                            if profile_name:
+                                initial_data["last_shot_profile"] = profile_name
+
+                        # Rating with default
                         initial_data["last_shot_rating"] = (
                             getattr(last_shot, "rating", None) or "none"
                         )
+
                         # Handle last_shot_time - convert timestamp to ISO format
                         shot_timestamp = getattr(last_shot, "time", None)
                         if shot_timestamp:
@@ -906,42 +912,24 @@ class MeticulousAddon:
                                 shot_time = datetime.fromtimestamp(shot_timestamp)
                                 initial_data["last_shot_time"] = shot_time.isoformat()
                             except (ValueError, OSError, TypeError):
-                                initial_data["last_shot_time"] = None
-                        else:
-                            initial_data["last_shot_time"] = None
-                    else:
-                        # Ensure these are in initial_data even if fetch failed
-                        initial_data["last_shot_name"] = None
-                        initial_data["last_shot_profile"] = None
-                        initial_data["last_shot_rating"] = "none"
-                        initial_data["last_shot_time"] = None
+                                pass  # Don't publish if conversion fails
                 except Exception as e:
                     logger.debug(f"Could not fetch initial last shot: {e}")
-                    # Ensure these are in initial_data even if fetch failed
-                    initial_data["last_shot_name"] = None
-                    initial_data["last_shot_profile"] = None
-                    initial_data["last_shot_rating"] = "none"
                     initial_data["last_shot_time"] = None
 
-                # Firmware update availability sensor
-                available = False
+                # Firmware update availability sensor - MUST fetch
                 try:
                     update_status = api.check_for_updates()
                     if update_status and not isinstance(update_status, APIError):
-                        available = getattr(update_status, "available", False)
+                        initial_data["firmware_update_available"] = getattr(
+                            update_status, "available", False
+                        )
                 except Exception as e:
                     logger.debug(f"Could not fetch firmware update status: {e}")
-                initial_data["firmware_update_available"] = available
             except Exception as e:
                 logger.debug(f"Could not fetch initial statistics: {e}")
 
         # Profile info (active profile and targets from that profile)
-        # Set safe defaults first
-        initial_data["active_profile"] = None
-        initial_data["profile_author"] = None
-        initial_data["target_temperature"] = None
-        initial_data["target_weight"] = None
-
         if self.api:
             try:
                 api = self.api  # Capture reference to satisfy type checker
