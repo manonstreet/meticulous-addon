@@ -70,9 +70,15 @@ class MeticulousAddon:
         if raw_machine_ip.lower().startswith("example") or " " in raw_machine_ip:
             raw_machine_ip = ""
         self.machine_ip = raw_machine_ip
-        # New: configurable refresh rate (minutes, default 5)
-        self.refresh_rate_minutes = int(self.config.get("refresh_rate_minutes", 5))
-        self.scan_interval = self.refresh_rate_minutes * 60
+        # Throttling and refresh configuration
+        self.socket_io_throttle_interval = int(self.config.get("socket_io_throttle_interval", 2))
+        stale_interval_hours = int(self.config.get("stale_data_refresh_interval", 24))
+        self.stale_data_refresh_interval = stale_interval_hours * 3600
+        self.scan_interval = 30  # Periodic updates every 30 seconds (for profiles, settings, stats)
+
+        # Track last update time per sensor for throttling
+        self.last_sensor_update_time: Dict[str, float] = {}
+        self.last_stale_refresh_time = time.time()
         self.running = False
         self.socket_connected = False
         # Backoff configuration
@@ -1144,6 +1150,28 @@ class MeticulousAddon:
         logger.info("Published device info to Home Assistant")
 
     # =========================================================================
+    # Throttling Helper
+    # =========================================================================
+
+    def _should_throttle_sensor(self, sensor_name: str) -> bool:
+        """Check if a sensor update should be throttled based on last update time.
+
+        Returns True if the sensor was updated within socket_io_throttle_interval seconds,
+        meaning we should skip this update. Returns False if we should publish it.
+        """
+        current_time = time.time()
+        last_update = self.last_sensor_update_time.get(sensor_name, 0)
+        time_since_last = current_time - last_update
+
+        # If enough time has passed, allow the update and record the time
+        if time_since_last >= self.socket_io_throttle_interval:
+            self.last_sensor_update_time[sensor_name] = current_time
+            return False  # Don't throttle
+
+        # Otherwise throttle
+        return True
+
+    # =========================================================================
     # Socket.IO Event Handlers
     # =========================================================================
 
@@ -1155,12 +1183,17 @@ class MeticulousAddon:
             if state != self.current_state:
                 logger.info(f"Machine state changed: {self.current_state} -> {state}")
                 self.current_state = state
+                # Publish state changes immediately (never throttle state transitions)
+                publish_state = True
+            else:
+                publish_state = False
 
-            # Detect profile changes
+            # Detect profile changes (never throttle)
             loaded_profile = status.get("loaded_profile")
             if loaded_profile and loaded_profile != self.current_profile:
                 logger.info(f"Profile changed: {self.current_profile} -> {loaded_profile}")
                 self.current_profile = loaded_profile
+                publish_state = True  # Always publish profile changes
                 # Trigger profile info update
                 if self.loop:
                     logger.debug("Scheduling profile info update after profile change")
@@ -1179,6 +1212,19 @@ class MeticulousAddon:
                 flow = getattr(sensors, "f", 0)
                 weight = getattr(sensors, "w", 0)
                 temperature = getattr(sensors, "t", 0)
+
+            # Check if chatty sensors should be throttled
+            chatty_sensors = ["pressure", "flow_rate", "shot_weight", "temperature"]
+            should_publish_chatty = True
+            if not publish_state:  # Only check throttle if no state/profile change
+                # Throttle only if ALL chatty sensors would be throttled
+                # This ensures one-time events always publish
+                throttle_check = all(
+                    self._should_throttle_sensor(sensor) for sensor in chatty_sensors
+                )
+                if throttle_check:
+                    logger.debug("Throttling status update: all chatty sensors within interval")
+                    should_publish_chatty = False
 
             sensor_data = {
                 "state": state,
@@ -1206,8 +1252,8 @@ class MeticulousAddon:
                     sensor_data["target_pressure"] = getattr(setpoints, "pressure", None)
                     sensor_data["target_flow"] = getattr(setpoints, "flow", None)
 
-            # Publish to Home Assistant (async)
-            if self.loop:
+            # Publish to Home Assistant (async) - only if not throttled
+            if (publish_state or should_publish_chatty) and self.loop:
                 asyncio.run_coroutine_threadsafe(
                     self.publish_to_homeassistant(sensor_data), self.loop
                 )
@@ -1246,6 +1292,13 @@ class MeticulousAddon:
                 }
                 t_bar_up = temps.t_bar_up
                 t_bar_down = temps.t_bar_down
+
+            # Check if all temperature sensors should be throttled
+            temp_sensors = ["boiler_temperature", "brew_head_temperature"]
+            throttle_check = all(self._should_throttle_sensor(sensor) for sensor in temp_sensors)
+            if throttle_check:
+                logger.debug("Throttling temperature update: all sensors within interval")
+                return
 
             # Publish to Home Assistant (async)
             if self.loop:
@@ -1527,8 +1580,14 @@ class MeticulousAddon:
                 # Perform full periodic updates on schedule (every scan_interval seconds)
                 current_time = time.time()
                 time_since_last_update = current_time - last_periodic_update
+                time_since_last_stale_refresh = current_time - self.last_stale_refresh_time
 
-                if time_since_last_update >= self.scan_interval:
+                # Check if stale data refresh is needed (every stale_data_refresh_interval)
+                stale_refresh_needed = (
+                    time_since_last_stale_refresh >= self.stale_data_refresh_interval
+                )
+
+                if time_since_last_update >= self.scan_interval or stale_refresh_needed:
                     # Only poll profile info if Socket.IO isn't connected (fallback mode)
                     if not self.socket_connected:
                         await self.update_profile_info()
@@ -1562,6 +1621,16 @@ class MeticulousAddon:
 
                     # Publish health metrics
                     await self.publish_health_metrics()
+
+                    # Log if stale refresh occurred
+                    if stale_refresh_needed:
+                        logger.info(
+                            f"Stale data refresh triggered: {time_since_last_stale_refresh:.1f}s "
+                            f">= {self.stale_data_refresh_interval}s"
+                        )
+                        self.last_stale_refresh_time = current_time
+                        # Clear sensor throttle tracking to allow immediate republish
+                        self.last_sensor_update_time.clear()
 
                     last_periodic_update = current_time
 
@@ -1642,8 +1711,9 @@ def main():
     """Entry point for the add-on."""
     addon = MeticulousAddon()
     logger.info(
-        f"Sensor refresh rate is set to {addon.refresh_rate_minutes} minute(s). "
-        "To change, set 'refresh_rate_minutes' in the add-on config (recommended: 5-10)."
+        f"Throttle interval set to {addon.socket_io_throttle_interval}s, "
+        f"stale data refresh every {addon.stale_data_refresh_interval // 3600}h. "
+        "Update 'socket_io_throttle_interval' and 'stale_data_refresh_interval' to configure."
     )
     try:
         asyncio.run(addon.run())

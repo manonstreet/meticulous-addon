@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from run import MeticulousAddon
 
-from meticulous.api_types import ActionType, APIError, BrightnessRequest, PartialSettings
+from meticulous.api_types import ActionType, APIError, PartialSettings
 
 logger = logging.getLogger(__name__)
 
@@ -98,11 +98,18 @@ def handle_command_tare_scale(addon: "MeticulousAddon"):
     if not addon.api:
         logger.error("Cannot tare scale: API not connected")
         return
-    result = addon.api.execute_action(ActionType.TARE)
-    if isinstance(result, APIError):
-        logger.error(f"tare_scale failed: {result.error}")
-    else:
-        logger.info("tare_scale: Success")
+    try:
+        # Call the HTTP endpoint directly instead of using pymeticulous wrapper
+        # This bypasses any potential issues with the wrapper's deserialization
+        response = addon.api.session.get(f"{addon.api.base_url}/api/v1/action/tare")
+        result = response.json()
+        status = result.get("status")
+        if status == "ok":
+            logger.info("tare_scale: Success")
+        else:
+            logger.error(f"tare_scale failed with status: {status}")
+    except Exception as e:
+        logger.error(f"tare_scale error: {e}", exc_info=True)
 
 
 def handle_command_load_profile(addon: "MeticulousAddon", profile_name: str):
@@ -143,22 +150,29 @@ def handle_command_set_brightness(addon: "MeticulousAddon", payload: str):
         return
     try:
         data = json.loads(payload) if payload.startswith("{") else {"brightness": int(payload)}
-        interpolation_value = data.get("interpolation", "curve")
-        brightness_req = BrightnessRequest(
-            brightness=data.get("brightness", 50),
-            interpolation=(
-                str(interpolation_value) if interpolation_value is not None else "curve"
-            ),
-            animation_time=data.get("animation_time", 500),
+        brightness_value = data.get("brightness", 50)
+
+        # Convert from 0-100 range to 0-1.0 range that the backend expects
+        brightness_normalized = brightness_value / 100.0
+
+        # Call the HTTP endpoint directly
+        request_data = {
+            "brightness": brightness_normalized,
+            "interpolation": data.get("interpolation", "curve"),
+            "animation_time": data.get("animation_time", 500) / 1000.0,  # Convert ms to seconds
+        }
+        response = addon.api.session.post(
+            f"{addon.api.base_url}/api/v1/machine/backlight", json=request_data
         )
-        result = addon.api.set_brightness(brightness_req)
-        if isinstance(result, APIError):
-            logger.error(f"set_brightness failed: {result.error}")
-        else:
-            brightness_value = data.get("brightness")
+
+        if response.status_code == 200:
             logger.info(f"set_brightness: Success ({brightness_value})")
             # Immediately publish the new brightness state
             _run_or_schedule(addon.publish_to_homeassistant({"brightness": brightness_value}))
+        else:
+            logger.error(
+                f"set_brightness failed with status {response.status_code}: " f"{response.text}"
+            )
     except Exception as e:
         logger.error(f"set_brightness error: {e}", exc_info=True)
 
