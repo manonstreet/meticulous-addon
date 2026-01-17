@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from run import MeticulousAddon
 
-from meticulous.api_types import ActionType, APIError, PartialSettings
+from meticulous.api_types import APIError, PartialSettings
 
 logger = logging.getLogger(__name__)
 
@@ -54,44 +54,68 @@ def handle_command_start_brew(addon: "MeticulousAddon"):
     if not addon.api:
         logger.error("Cannot start brew: API not connected")
         return
-    result = addon.api.execute_action(ActionType.START)
-    if isinstance(result, APIError):
-        logger.error(f"start_brew failed: {result.error}")
-    else:
-        logger.info("start_brew: Success")
+    try:
+        # Call the HTTP endpoint directly instead of using pymeticulous wrapper
+        response = addon.api.session.get(f"{addon.api.base_url}/api/v1/action/start")
+        result = response.json()
+        status = result.get("status")
+        if status == "ok":
+            logger.info("start_brew: Success")
+        else:
+            logger.error(f"start_brew failed with status: {status}")
+    except Exception as e:
+        logger.error(f"start_brew error: {e}", exc_info=True)
 
 
 def handle_command_stop_brew(addon: "MeticulousAddon"):
     if not addon.api:
         logger.error("Cannot stop brew: API not connected")
         return
-    result = addon.api.execute_action(ActionType.STOP)
-    if isinstance(result, APIError):
-        logger.error(f"stop_brew failed: {result.error}")
-    else:
-        logger.info("stop_brew: Success")
+    try:
+        # Call the HTTP endpoint directly instead of using pymeticulous wrapper
+        response = addon.api.session.get(f"{addon.api.base_url}/api/v1/action/stop")
+        result = response.json()
+        status = result.get("status")
+        if status == "ok":
+            logger.info("stop_brew: Success")
+        else:
+            logger.error(f"stop_brew failed with status: {status}")
+    except Exception as e:
+        logger.error(f"stop_brew error: {e}", exc_info=True)
 
 
 def handle_command_continue_brew(addon: "MeticulousAddon"):
     if not addon.api:
         logger.error("Cannot continue brew: API not connected")
         return
-    result = addon.api.execute_action(ActionType.CONTINUE)
-    if isinstance(result, APIError):
-        logger.error(f"continue_brew failed: {result.error}")
-    else:
-        logger.info("continue_brew: Success")
+    try:
+        # Call the HTTP endpoint directly instead of using pymeticulous wrapper
+        response = addon.api.session.get(f"{addon.api.base_url}/api/v1/action/continue")
+        result = response.json()
+        status = result.get("status")
+        if status == "ok":
+            logger.info("continue_brew: Success")
+        else:
+            logger.error(f"continue_brew failed with status: {status}")
+    except Exception as e:
+        logger.error(f"continue_brew error: {e}", exc_info=True)
 
 
 def handle_command_preheat(addon: "MeticulousAddon"):
     if not addon.api:
         logger.error("Cannot preheat: API not connected")
         return
-    result = addon.api.execute_action(ActionType.PREHEAT)
-    if isinstance(result, APIError):
-        logger.error(f"preheat failed: {result.error}")
-    else:
-        logger.info("preheat: Success")
+    try:
+        # Call the HTTP endpoint directly instead of using pymeticulous wrapper
+        response = addon.api.session.get(f"{addon.api.base_url}/api/v1/action/preheat")
+        result = response.json()
+        status = result.get("status")
+        if status == "ok":
+            logger.info("preheat: Success")
+        else:
+            logger.error(f"preheat failed with status: {status}")
+    except Exception as e:
+        logger.error(f"preheat error: {e}", exc_info=True)
 
 
 def handle_command_tare_scale(addon: "MeticulousAddon"):

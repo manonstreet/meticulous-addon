@@ -1,7 +1,7 @@
 {
   "configuration": {
     "machine_ip": {
-      "name": "Machine IP Address",
+      "name": "Machine IP Address or Hostname",
       "description": "The IP address or hostname of your Meticulous Espresso machine (e.g., 192.168.1.100 or meticulous.local)"
     },
     "socket_io_throttle_interval": {
