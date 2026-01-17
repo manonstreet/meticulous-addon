@@ -105,7 +105,6 @@ class MeticulousAddon:
             "brewing",
             "connected",
             "last_shot_name",
-            "last_shot_profile",
             "last_shot_rating",
             "profile_author",
             "firmware_version",
@@ -503,11 +502,6 @@ class MeticulousAddon:
                 "component": "sensor",
                 "state_topic": f"{base}/last_shot_name/state",
                 "name": "Last Shot Name",
-            },
-            "last_shot_profile": {
-                "component": "sensor",
-                "state_topic": f"{base}/last_shot_profile/state",
-                "name": "Last Shot Profile",
             },
             "last_shot_rating": {
                 "component": "sensor",
@@ -908,12 +902,6 @@ class MeticulousAddon:
                         shot_name = getattr(last_shot, "name", None)
                         if shot_name:
                             initial_data["last_shot_name"] = shot_name
-
-                        # Only include profile if present
-                        if hasattr(last_shot, "profile"):
-                            profile_name = getattr(last_shot.profile, "name", None)
-                            if profile_name:
-                                initial_data["last_shot_profile"] = profile_name
 
                         # Rating with default
                         initial_data["last_shot_rating"] = (
@@ -1614,11 +1602,6 @@ class MeticulousAddon:
                 if last_shot and not isinstance(last_shot, APIError):
                     last_shot_data = {
                         "last_shot_name": getattr(last_shot, "name", None),
-                        "last_shot_profile": (
-                            getattr(last_shot.profile, "name", None)
-                            if hasattr(last_shot, "profile")
-                            else None
-                        ),
                         "last_shot_rating": getattr(last_shot, "rating", None) or "none",
                     }
                     # Handle timestamp safely
@@ -1633,13 +1616,8 @@ class MeticulousAddon:
                     else:
                         last_shot_data["last_shot_time"] = None
                 else:
-                    # Ensure these are published even if fetch failed
-                    last_shot_data = {
-                        "last_shot_name": None,
-                        "last_shot_profile": None,
-                        "last_shot_rating": "none",
-                        "last_shot_time": None,
-                    }
+                    # Only publish if we have data
+                    pass
 
                 await self.publish_to_homeassistant(last_shot_data)
                 logger.debug("Updated last shot data")
