@@ -553,6 +553,12 @@ class MeticulousAddon:
                 "payload_on": "true",
                 "payload_off": "false",
             },
+            # Brightness: read-only sensor, control is via set_brightness command
+            "brightness": {
+                "component": "sensor",
+                "state_topic": f"{base}/brightness/state",
+                "name": "Brightness",
+            },
             "firmware_update_available": {
                 "component": "binary_sensor",
                 "state_topic": f"{base}/firmware_update_available/state",
@@ -646,6 +652,9 @@ class MeticulousAddon:
             sample_payload_logged = False
             for key, m in self._mqtt_sensor_mapping().items():
                 if key == "active_profile":
+                    continue
+                # Skip brightness - it's controlled via set_brightness command
+                if key == "brightness":
                     continue
 
                 component = m["component"]
@@ -1490,16 +1499,7 @@ class MeticulousAddon:
             # If brightness is in 0-1.0 range, convert to 0-100
             if isinstance(brightness, (int, float)) and 0 <= brightness <= 1:
                 settings["brightness"] = int(brightness * 100)
-
-            # Publish brightness directly to MQTT since it's not in sensor mapping
-            if self.mqtt_client:
-                state_topic = f"{self.state_prefix}/set_brightness/state"
-                self.mqtt_client.publish(
-                    state_topic, str(settings["brightness"]), qos=1, retain=True
-                )
-                logger.info(f"Published brightness to {state_topic}: {settings['brightness']}")
-
-        # Publish other settings through normal routing
+        # Publish all settings through normal routing (includes delta filtering)
         if self.loop:
             asyncio.run_coroutine_threadsafe(self.publish_to_homeassistant(settings), self.loop)
 
