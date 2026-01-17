@@ -110,7 +110,6 @@ class MeticulousAddon:
             "firmware_version",
             "software_version",
             "last_shot_time",
-            "firmware_update_available",
             "sounds_enabled",
             "total_shots",
         }
@@ -559,11 +558,6 @@ class MeticulousAddon:
                 "state_topic": f"{base}/brightness/state",
                 "name": "Brightness",
             },
-            "firmware_update_available": {
-                "component": "binary_sensor",
-                "state_topic": f"{base}/firmware_update_available/state",
-                "name": "Firmware Update Available",
-            },
         }
         # fmt: on
 
@@ -601,12 +595,8 @@ class MeticulousAddon:
                 "command_suffix": "set_brightness",
                 "type": "number",
                 "min": 0,
-                "max": 100,
-            },
-            "reboot_machine": {
-                "name": "Reboot Machine",
-                "icon": "mdi:restart",
-                "command_suffix": "reboot_machine",
+                "max": 1,
+                "step": 0.01,
             },
         }
 
@@ -694,8 +684,6 @@ class MeticulousAddon:
                         payload["device_class"] = "connectivity"
                     elif key == "brewing":
                         payload["device_class"] = "running"
-                    elif key == "firmware_update_available":
-                        payload["device_class"] = "update"
                     else:
                         # For other binary sensors, explicitly set payload values
                         payload["payload_on"] = "true"
@@ -764,8 +752,8 @@ class MeticulousAddon:
                         "device": device,
                         "icon": cmd["icon"],
                         "min": cmd.get("min", 0),
-                        "max": cmd.get("max", 100),
-                        "unit_of_measurement": "%",
+                        "max": cmd.get("max", 1),
+                        "step": cmd.get("step", 0.01),
                     }
                     # Log first command payload as example
                     if not sample_cmd_logged:
@@ -935,17 +923,6 @@ class MeticulousAddon:
                     logger.debug(f"Could not fetch initial last shot: {e}")
                     initial_data["last_shot_time"] = None
 
-                # Firmware update availability sensor
-                # Infer false if we can't fetch (safe: assume no update available)
-                initial_data["firmware_update_available"] = False
-                try:
-                    update_status = api.check_for_updates()
-                    if update_status and not isinstance(update_status, APIError):
-                        initial_data["firmware_update_available"] = getattr(
-                            update_status, "available", False
-                        )
-                except Exception as e:
-                    logger.debug(f"Could not fetch firmware update status: {e}")
             except Exception as e:
                 logger.debug(f"Could not fetch initial statistics: {e}")
 
@@ -1493,12 +1470,6 @@ class MeticulousAddon:
     def _handle_settings_change_event(self, settings: Dict):
         """Handle settings change events from Socket.IO (e.g., brightness)."""
         logger.info(f"Settings change event received: {settings}")
-        # Normalize brightness to 0-100 range if present
-        if isinstance(settings, dict) and "brightness" in settings:
-            brightness = settings.get("brightness")
-            # If brightness is in 0-1.0 range, convert to 0-100
-            if isinstance(brightness, (int, float)) and 0 <= brightness <= 1:
-                settings["brightness"] = int(brightness * 100)
         # Publish all settings through normal routing (includes delta filtering)
         if self.loop:
             asyncio.run_coroutine_threadsafe(self.publish_to_homeassistant(settings), self.loop)
@@ -1765,26 +1736,6 @@ class MeticulousAddon:
 
                     # Update statistics
                     await self.update_statistics()
-
-                    # Update firmware update availability sensor
-                    if self.api and self.mqtt_enabled and self.mqtt_client:
-                        available = False
-                        try:
-                            update_status = self.api.check_for_updates()
-                            if update_status and not isinstance(update_status, APIError):
-                                available = getattr(update_status, "available", False)
-                        except Exception as e:
-                            logger.debug(
-                                f"Could not fetch firmware update status during refresh: {e}"
-                            )
-                        # Always publish, even if check failed (defaults to False)
-                        self.mqtt_client.publish(
-                            f"{self.state_prefix}/firmware_update_available/state",
-                            str(available).lower(),
-                            qos=1,
-                            retain=True,
-                        )
-                        logger.debug(f"Published firmware update availability: {available}")
 
                     # Publish health metrics
                     await self.publish_health_metrics()

@@ -40,8 +40,6 @@ def mqtt_on_message(addon: "MeticulousAddon", client, userdata, msg):
             handle_command_set_brightness(addon, payload)
         elif topic == f"{addon.command_prefix}/enable_sounds":
             handle_command_enable_sounds(addon, payload)
-        elif topic == f"{addon.command_prefix}/reboot_machine":
-            handle_command_reboot_machine(addon)
         else:
             logger.warning(f"Unknown command topic: {topic}")
     except Exception as e:
@@ -238,25 +236,6 @@ def handle_command_enable_sounds(addon: "MeticulousAddon", payload: str):
             logger.error(f"enable_sounds error: {e}", exc_info=True)
     except Exception as e:
         logger.error(f"enable_sounds error: {e}", exc_info=True)
-
-
-def handle_command_reboot_machine(addon: "MeticulousAddon"):
-    if not addon.api:
-        logger.error("Cannot reboot machine: API not connected")
-        return
-    try:
-        # Call the HTTP endpoint directly instead of using pymeticulous wrapper.
-        # The wrapper tries to deserialize reboot response which may have schema
-        # mismatches. Direct HTTP gives us full control over response handling.
-        response = addon.api.session.post(f"{addon.api.base_url}/api/v1/machine/reboot")
-        if response.status_code == 200:
-            logger.info("reboot_machine: Success")
-        else:
-            logger.error(
-                f"reboot_machine failed with status {response.status_code}: " f"{response.text}"
-            )
-    except Exception as e:
-        logger.error(f"reboot_machine error: {e}", exc_info=True)
 
 
 def _run_or_schedule(coro):
