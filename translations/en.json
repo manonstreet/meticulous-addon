@@ -30,11 +30,11 @@
     },
     "mqtt_username": {
       "name": "MQTT Username",
-      "description": "Optional username for MQTT broker (auto-detected from HA MQTT integration). (Default: empty)"
+      "description": "Optional username for MQTT broker. (Default: empty, auto-detected from HA MQTT integration)"
     },
     "mqtt_password": {
       "name": "MQTT Password",
-      "description": "Optional password for MQTT broker (auto-detected from HA MQTT integration). (Default: empty)"
+      "description": "Optional password for MQTT broker. (Default: empty, auto-detected from HA MQTT integration)"
     }
   }
 }
