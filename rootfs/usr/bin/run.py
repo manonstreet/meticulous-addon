@@ -304,7 +304,7 @@ class MeticulousAddon:
 
             # Connect Socket.IO for real-time updates
             try:
-                logger.debug("Connecting to Socket.IO...")
+                logger.info("Connecting to Socket.IO...")
                 self.api.connect_to_socket()
                 self.socket_connected = True
                 self.api_connected = True
@@ -340,7 +340,7 @@ class MeticulousAddon:
         data = {"connected": connected}
         await self.publish_to_homeassistant(data)
         state = "connected" if connected else "disconnected"
-        logger.debug(f"Connectivity state: {state}")
+        logger.info(f"Connectivity state: {state}")
         # Publish availability via MQTT
         if self.mqtt_client:
             self.mqtt_client.publish(
@@ -1033,6 +1033,11 @@ class MeticulousAddon:
         initial_data["connected"] = self.socket_connected
         # Infer brewing false (safe: machine idle until Socket.IO indicates otherwise)
         initial_data["brewing"] = False
+        logger.info(
+            f"Initial state: connected={initial_data['connected']}, "
+            f"brewing={initial_data['brewing']}, "
+            f"socket_connected={self.socket_connected}"
+        )
 
         # Publish all available initial state
         await self.publish_to_homeassistant(initial_data)
@@ -1234,10 +1239,10 @@ class MeticulousAddon:
             if self.mqtt_username and self.mqtt_password:
                 client.username_pw_set(self.mqtt_username, self.mqtt_password)
 
+            # Set client reference BEFORE starting connection so on_connect callback can use it
+            self.mqtt_client = client
             client.loop_start()
             client.connect(self.mqtt_host, self.mqtt_port, keepalive=60)
-
-            self.mqtt_client = client
         except Exception as e:
             self.mqtt_client = None
             # Only log at INFO level on first failure, subsequent retries at DEBUG

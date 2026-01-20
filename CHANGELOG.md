@@ -2,6 +2,12 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.26.1] - 2026-01-20
+
+### 🔧 Improvements
+- Improved logging to help diagnose sensor issues
+- Fixed connection timing to ensure proper initialization
+
 ## [0.26.0] - 2026-01-20
 
 ### ✨ Fixes
