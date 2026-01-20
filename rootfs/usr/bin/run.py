@@ -405,10 +405,12 @@ class MeticulousAddon:
                 for key, value in sensor_data.items():
                     # Skip None values - don't publish them
                     if value is None:
+                        logger.debug(f"Skipping {key}: value is None")
                         continue
 
                     mapping = self._mqtt_sensor_mapping().get(key)
                     if not mapping:
+                        logger.debug(f"Skipping {key}: no mapping found")
                         continue
                     topic = mapping["state_topic"]
                     # Convert booleans to lowercase strings for MQTT
@@ -422,9 +424,10 @@ class MeticulousAddon:
                         )
                     # Publish state with QoS 1 and retain for reliability
                     self.mqtt_client.publish(topic, payload, qos=1, retain=True)
+                    logger.debug(f"Published {key}={payload} to {topic}")
                     published_count += 1
                 if published_count > 0:
-                    logger.debug(f"Published {published_count} MQTT state updates")
+                    logger.info(f"Published {published_count} MQTT state updates")
             except Exception as e:
                 logger.warning(f"MQTT publish failed: {e}")
 
@@ -965,7 +968,7 @@ class MeticulousAddon:
                     profile = last_profile.profile
                     logger.info(f"Profile: {profile}, type: {type(profile)}")
                     profile_name = getattr(profile, "name", None)
-                    profile_id = getattr(last_profile, "id", None)
+                    profile_id = getattr(profile, "id", None)
                     logger.info(
                         f"Profile name: {profile_name}, id: {profile_id}, "
                         f"temperature: {getattr(profile, 'temperature', None)}"
