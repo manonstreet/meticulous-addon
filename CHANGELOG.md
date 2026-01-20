@@ -2,6 +2,12 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.26.2] - 2026-01-20
+
+### ✨ Improvements
+- **Automatic entity cleanup on startup** - Add-on now automatically clears stale Home Assistant entities on each upgrade, ensuring a clean slate without manual intervention
+- **Cleaner logs** - Reduced verbosity in startup logs by moving diagnostic details to debug level
+
 ## [0.26.1] - 2026-01-20
 
 ### 🔧 Improvements
