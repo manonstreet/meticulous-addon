@@ -893,8 +893,10 @@ class MeticulousAddon:
                     initial_data["total_shots"] = stats.totalSavedShots
 
                 # Also get last shot info - only publish if successfully fetched
+                initial_data["last_shot_time"] = None  # Default to None if not available
                 try:
                     last_shot = api.get_last_shot()
+                    logger.debug(f"get_last_shot returned: {last_shot}, type: {type(last_shot)}")
                     if last_shot and not isinstance(last_shot, APIError):
                         # Only publish if we got real data
                         shot_name = getattr(last_shot, "name", None)
@@ -908,15 +910,25 @@ class MeticulousAddon:
 
                         # Handle last_shot_time - convert timestamp to ISO format
                         shot_timestamp = getattr(last_shot, "time", None)
+                        logger.debug(
+                            f"shot_timestamp: {shot_timestamp}, type: {type(shot_timestamp)}"
+                        )
                         if shot_timestamp:
                             try:
                                 shot_time = datetime.fromtimestamp(shot_timestamp)
                                 initial_data["last_shot_time"] = shot_time.isoformat()
-                            except (ValueError, OSError, TypeError):
-                                pass  # Don't publish if conversion fails
+                                logger.info(
+                                    f"Converted shot_timestamp {shot_timestamp} to "
+                                    f"{initial_data['last_shot_time']}"
+                                )
+                            except (ValueError, OSError, TypeError) as e:
+                                logger.warning(
+                                    f"Could not convert shot timestamp {shot_timestamp}: {e}"
+                                )
+                    else:
+                        logger.debug(f"get_last_shot returned None or APIError: {last_shot}")
                 except Exception as e:
-                    logger.debug(f"Could not fetch initial last shot: {e}")
-                    initial_data["last_shot_time"] = None
+                    logger.warning(f"Could not fetch initial last shot: {e}", exc_info=True)
 
             except Exception as e:
                 logger.debug(f"Could not fetch initial statistics: {e}")
@@ -1577,36 +1589,45 @@ class MeticulousAddon:
                 logger.debug(f"Updated statistics: {stats.totalSavedShots} total shots")
 
             # Also get last shot info
+            last_shot_data = {
+                "last_shot_name": None,
+                "last_shot_rating": "none",
+                "last_shot_time": None,
+            }
             try:
                 last_shot = await asyncio.get_running_loop().run_in_executor(
                     None, lambda: api.get_last_shot()
                 )
-                last_shot_data = {}
+                logger.debug(f"get_last_shot returned: {last_shot}, type: {type(last_shot)}")
                 if last_shot and not isinstance(last_shot, APIError):
-                    last_shot_data = {
-                        "last_shot_name": getattr(last_shot, "name", None),
-                        "last_shot_rating": getattr(last_shot, "rating", None) or "none",
-                    }
+                    last_shot_data["last_shot_name"] = getattr(last_shot, "name", None)
+                    last_shot_data["last_shot_rating"] = (
+                        getattr(last_shot, "rating", None) or "none"
+                    )
                     # Handle timestamp safely
                     shot_timestamp = getattr(last_shot, "time", None)
+                    logger.debug(f"shot_timestamp: {shot_timestamp}, type: {type(shot_timestamp)}")
                     if shot_timestamp:
                         try:
                             last_shot_data["last_shot_time"] = datetime.fromtimestamp(
                                 shot_timestamp
                             ).isoformat()
-                        except (ValueError, OSError, TypeError):
-                            last_shot_data["last_shot_time"] = None
-                    else:
-                        last_shot_data["last_shot_time"] = None
+                            logger.info(
+                                f"Converted shot_timestamp {shot_timestamp} to "
+                                f"{last_shot_data['last_shot_time']}"
+                            )
+                        except (ValueError, OSError, TypeError) as e:
+                            logger.warning(
+                                f"Could not convert shot timestamp {shot_timestamp}: {e}"
+                            )
                 else:
-                    # Only publish if we have data
-                    pass
+                    logger.debug(f"get_last_shot returned None or APIError: {last_shot}")
 
                 await self.publish_to_homeassistant(last_shot_data)
                 logger.debug("Updated last shot data")
             except Exception as e:
-                logger.debug(
-                    f"Could not retrieve last shot (firmware mismatch): " f"{type(e).__name__}"
+                logger.warning(
+                    f"Could not retrieve last shot: " f"{type(e).__name__}: {e}", exc_info=True
                 )
 
         except Exception as e:
