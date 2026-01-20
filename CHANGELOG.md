@@ -2,6 +2,16 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.5.24] - 2026-01-20
+
+### ⚙️ Maintenance
+- **Upgraded to pyMeticulous 0.3.1** - Removed workaround code and migrated to official API methods
+  - Action commands (start brew, stop brew, continue brew, preheat, tare scale) now use `api.execute_action()`
+  - Brightness control now uses `api.set_brightness()` with `BrightnessRequest`
+  - Sounds control now uses `api.update_setting()` with `PartialSettings`
+  - Eliminates direct HTTP endpoint calls in favor of stable API wrapper
+  - Fixes ActionType enum serialization issues in pyMeticulous 0.3.1
+
 ## [0.5.23] - 2026-01-17
 
 ### 🐛 Bug Fixes
