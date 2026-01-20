@@ -2,164 +2,124 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.26.0] - 2026-01-20
+
+### ✨ Fixes
+- **All sensors now display properly** - Fixed issues where Brewing, Connected, and other binary sensors showed as "unknown"
+- **Fixed brightness control** - No longer appears as duplicate sensor
+- **Fixed sounds toggle** - Now appears correctly in Home Assistant
+- **Fixed active profile selector** - Shows the currently selected profile
+- **Improved startup** - All sensor values load immediately when the add-on starts
+- Updated to pyMeticulous 0.3.1 for better API reliability
+
 ## [0.5.25] - 2026-01-20
 
-### 🔍 Diagnostics & Debugging
-- **Enhanced MQTT publish logging** - Added detailed debug logging to track which sensor values are published to MQTT
-  - Shows which fields are skipped (None values, missing mappings)
-  - Logs actual MQTT topic and payload for each published sensor
-  - Helps diagnose sensor visibility issues in Home Assistant
+### 🔍 Improvements
+- Added better diagnostics to help troubleshoot sensor visibility issues
 
 ## [0.5.24] - 2026-01-20
 
-### ⚙️ Maintenance
-- **Upgraded to pyMeticulous 0.3.1** - Removed workaround code and migrated to official API methods
-  - Action commands (start brew, stop brew, continue brew, preheat, tare scale) now use `api.execute_action()`
-  - Brightness control now uses `api.set_brightness()` with `BrightnessRequest`
-  - Sounds control now uses `api.update_setting()` with `PartialSettings`
-  - Eliminates direct HTTP endpoint calls in favor of stable API wrapper
-  - Fixes ActionType enum serialization issues in pyMeticulous 0.3.1
+### ⚙️ Improvements
+- Updated core machine communication for better reliability
 
 ## [0.5.23] - 2026-01-17
 
 ### 🐛 Bug Fixes
-- **Fixed Active Profile dropdown** - Profile selector now shows the currently selected profile when you open Home Assistant
-- **Improved sensor initial state** - All sensor values are now properly fetched from the machine during startup (instead of showing "unknown")
-  - Firmware updates availability is properly detected (or inferred as unavailable if check fails)
-  - Last shot time always shows a real value from your machine's history
-  - Profile information (author, target temperature, target weight) loads immediately
-- **Fixed Sounds control** - Sounds on/off toggle now appears correctly in Home Assistant
-- **Fixed Brightness control** - Brightness slider now appears correctly in Home Assistant
-- **Removed redundant sensor** - Consolidated duplicate profile information for cleaner Home Assistant interface
-- **Graceful shutdown** - Add-on now properly notifies Home Assistant when shutting down (sets connected to false)
+- Fixed profile selector not showing your current choice
+- All machine values now load immediately when the add-on starts
+- Fixed sounds and brightness controls appearing correctly in Home Assistant
 
 ## [0.5.22] - 2026-01-17
 
 ### 🐛 Bug Fixes
-- **Fixed sensor "Unknown" display** - All sensors now show proper values instead of "unknown" on startup
-  - **Brewing Status**: Now shows `false` until an extraction begins, then updates in real-time
-  - **Connected Status**: Displays actual Socket.IO connection state (true/false)
-  - **Target Temperature**: Always shows the active profile's target temperature
-  - **Last Shot Time**: Properly displays the timestamp of your last shot in ISO format
-- Guaranteed all sensor initial values are populated, preventing "unavailable" states in Home Assistant
+- Fixed sensors showing "unknown" when they should show real values
+- All machine information loads properly at startup
 
 ## [0.5.21] - 2026-01-17
 
 ### ⚡ Performance
-- Simplified sensor filtering configuration with consolidated delta parameters
-- **New configuration options** (replaces individual per-sensor thresholds):
-  - **Temperature Delta** (0.5°C): Applies to all temperature sensors (boiler, brew head, external sensors, target temperature)
-  - **Pressure Delta** (0.2 bar): Applies to pressure and target pressure
-  - **Flow Delta** (0.1 ml/s): Applies to flow rate and target flow
-  - **Weight Delta** (0.1g): Applies to shot weight and target weight
-  - **Time Delta** (0.1s): Applies to timers and elapsed time tracking
-  - **Voltage Delta** (1.0V): Power supply voltage readings
-  - **Brightness Delta** (1 point): Display brightness level
-- Reduced MQTT message flooding by ~70% while keeping sensor readings responsive
-- All threshold defaults optimized for typical espresso brewing scenarios
+- Reduced unnecessary sensor messages - your network stays quieter while sensors still update responsively
+- New settings let you control how often sensors refresh
 
 ## [0.5.20] - 2026-01-15
 
 ### 🔧 Improvements
-- Fixed MQTT device discovery grouping by excluding null fields from device block
-- Removed `null` values for optional device fields (`sw_version`, `hw_version`) to match Home Assistant device schema expectations
-- Ensures all entity discovery configs are recognized as belonging to the same device
+- Fixed how your machine appears as a device in Home Assistant
 
 ## [0.5.19] - 2026-01-15
 
 ### 🔧 Improvements
-- Corrected MQTT discovery payload field names to match Home Assistant spec exactly
-- Changed `uniq_id` to `unique_id` (critical fix for HA discovery acceptance)
-- Replaced abbreviated field names with full names for clarity: `stat_t` → `state_topic`, `cmd_t` → `command_topic`, `avty_t` → `availability_topic`, `dev_cla` → `device_class`, `unit_of_meas` → `unit_of_measurement`
-- Home Assistant now properly processes and recognizes discovery messages
+- Fixed how Home Assistant recognizes the add-on
 
 ## [0.5.18] - 2026-01-15
 
 ### 🔧 Improvements
-- Fixed MQTT discovery subscription order to match zigbee2mqtt pattern
-- Now subscribes to homeassistant/# BEFORE publishing discovery configs
-- Ensures proper handshaking with broker before publishing discovery messages
-- Resolves discovery message delivery to Home Assistant
+- Improved connection handshake with Home Assistant
 
 ## [0.5.17] - 2026-01-15
 
 ### ⚡ Performance
-- Reduced MQTT discovery latency from ~5 minutes to ~0.5 seconds after connection
-- Restructured periodic_updates loop to check discovery flag frequently without blocking API refresh schedule
-- Discovery now publishes immediately after MQTT connection handshake completes
+- Sensors now appear in Home Assistant much faster after startup
 
 ## [0.5.16] - 2026-01-15
 
 ### 🐛 Bug Fixes
-- Fixed MQTT discovery device name inconsistency causing potential conflicts
-- Now uses fixed device name "Meticulous Espresso" for reliable Home Assistant discovery
+- Fixed device name consistency in Home Assistant
 
 ## [0.5.15] - 2026-01-15
 
 ### 🔧 Improvements
-- Enhanced MQTT diagnostics with detailed connection attempt logging
-- Now logs MQTT connection host, port, username, and password status
-- Better visibility for troubleshooting credential and authentication issues
+- Better diagnostic information for troubleshooting connection issues
 
 ## [0.5.14] - 2026-01-15
 
 ### 🔧 Improvements
-- Upgraded MQTT discovery with QoS 1 and proper async/await handling
-- Extended background thread flush time to ensure all discovery messages reach broker
-- Added comprehensive error handling for all discovery publishing blocks
+- Improved sensor discovery reliability
 
 ## [0.5.13] - 2026-01-15
 
 ### 🔧 Improvements
-- Simplified MQTT discovery publishing with cleaner async/await pattern
-- Improved error handling and logging for discovery process
-- Better visibility into discovery publishing with detailed INFO-level logs
+- Better error handling for sensor discovery
 
 ## [0.5.12] - 2026-01-15
 
 ### 🐛 Bug Fixes
-- Fixed MQTT discovery entities not appearing in Home Assistant
-- Changed MQTT discovery publish quality of service from QoS 0 to QoS 1 for guaranteed delivery
-- Made discovery publishing fully async with proper await handling
-- Discovery messages now properly reach Home Assistant broker
+- Fixed sensors not appearing in Home Assistant after starting the add-on
 
 ## [0.5.11] - 2026-01-15
 
 ### 🔧 Improvements
-- Enhanced MQTT discovery diagnostics with connection state logging
-- Now logs client connection status before and after discovery publishing
-- Improved debug output for troubleshooting discovery issues
+- Better diagnostics for connection troubleshooting
 
 ## [0.5.10] - 2026-01-15
 
 ### 🐛 Bug Fixes
-- Fixed MQTT discovery entities not appearing - added connection handshake delay
+- Fixed sensors not appearing after startup
 
 ## [0.5.9] - 2026-01-15
 
 ### 🔧 Improvements
-- Added diagnostics for MQTT discovery publishing to help troubleshoot connectivity issues
+- Added troubleshooting information for sensor discovery
 
 ## [0.5.8] - 2026-01-15
 
 ### 🐛 Bug Fixes
-- Fixed MQTT Home Assistant discovery entities not appearing after add-on restart
-  - Your machine sensors now properly show up in Home Assistant after any restart or reconnection
+- Fixed sensors disappearing after add-on restart - they now reappear properly in Home Assistant
 
 ## [0.5.7] - 2026-01-15
 
 ### 🐛 Bug Fixes
-- Fixed MQTT discovery messages not reaching Home Assistant broker
+- Fixed sensors not reaching Home Assistant
 
 ## [0.5.6] - 2026-01-15
 
 ### 🐛 Bug Fixes
-- Improved MQTT message delivery confirmation and diagnostics
+- Improved message delivery to Home Assistant
 
 ## [0.5.5] - 2026-01-15
 
 ### 🐛 Bug Fixes
-- Improved MQTT diagnostics and error handling
+- Improved connection reliability
 
 ## [0.5.4] - 2026-01-14
 
