@@ -628,6 +628,47 @@ class MeticulousAddon:
             device["hw_version"] = hw_version
         return device
 
+    async def _mqtt_clear_old_discovery(self) -> None:
+        """Clear all old discovery configs by publishing empty payloads with retain flag.
+
+        This ensures clean slate for Home Assistant discovery on each startup,
+        removing any stale entities from previous versions or configurations.
+        """
+        if not (self.mqtt_enabled and self.mqtt_client):
+            logger.debug("Skipping discovery clear: mqtt not ready")
+            return
+
+        logger.info("Clearing old Home Assistant discovery configs")
+
+        # List of all components we publish discovery for
+        components = ["sensor", "binary_sensor", "switch", "number", "button", "select"]
+
+        try:
+            for component in components:
+                # We need to clear specific entity IDs we know about
+                # Build list from sensor mapping and commands
+                entity_ids = set()
+
+                # Add sensor entity IDs
+                for key in self._mqtt_sensor_mapping().keys():
+                    if key != "brightness":  # Skip brightness - it's only a number control
+                        entity_ids.add(f"{self.slug}_{key}")
+
+                # Add command entity IDs
+                for key in self._mqtt_command_mapping().keys():
+                    entity_ids.add(f"{self.slug}_{key}")
+
+                # Publish empty payload (retain=True) to clear each config
+                for entity_id in entity_ids:
+                    config_topic = f"{self.discovery_prefix}/{component}/{entity_id}/config"
+                    self.mqtt_client.publish(config_topic, "", qos=1, retain=True)
+                    logger.debug(f"Cleared: {config_topic}")
+                    await asyncio.sleep(0.01)  # Small yield to event loop
+
+            logger.debug("Discovery configs cleared")
+        except Exception as e:
+            logger.error(f"Error clearing old discovery: {e}", exc_info=True)
+
     async def _mqtt_publish_discovery(self) -> None:
         """Publish Home Assistant MQTT discovery configs using QoS 1."""
         if not (self.mqtt_enabled and self.mqtt_client):
@@ -1765,7 +1806,10 @@ class MeticulousAddon:
                         # Wait for connection to fully handshake with broker
                         logger.debug("Waiting 1s for MQTT handshake before discovery publish...")
                         await asyncio.sleep(1.0)
-                        logger.debug("Handshake complete, calling discovery publish...")
+                        logger.debug(
+                            "Handshake complete, clearing old discovery and publishing new..."
+                        )
+                        await self._mqtt_clear_old_discovery()
                         await self._mqtt_publish_discovery()
                         self.mqtt_discovery_pending = False
                     except Exception as e:
