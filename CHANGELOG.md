@@ -2,6 +2,14 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.5.25] - 2026-01-20
+
+### 🔍 Diagnostics & Debugging
+- **Enhanced MQTT publish logging** - Added detailed debug logging to track which sensor values are published to MQTT
+  - Shows which fields are skipped (None values, missing mappings)
+  - Logs actual MQTT topic and payload for each published sensor
+  - Helps diagnose sensor visibility issues in Home Assistant
+
 ## [0.5.24] - 2026-01-20
 
 ### ⚙️ Maintenance
