@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.26.5] - 2026-01-26
+
+### 🔧 Fixes
+- **Pinned pymeticulous to 0.3.1** - Fixed version mismatch where container could install 0.3.0 with validation bugs
+
 ## [0.26.4] - 2026-01-26
 
 ### 🔧 Fixes
