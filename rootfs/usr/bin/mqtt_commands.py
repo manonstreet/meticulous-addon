@@ -189,9 +189,16 @@ def handle_command_set_brightness(addon: "MeticulousAddon", payload: str):
             logger.error(f"set_brightness failed: {result.error}")
         else:
             logger.info(f"set_brightness: Success ({brightness_value}%)")
-            # Don't immediately publish state back - let state updates come from machine
-            # publishing back to MQTT can cause feedback loops with retained messages
-            # _run_or_schedule(addon.publish_to_homeassistant({"brightness": brightness_value}))
+            # Publish state update without retain to avoid feedback loops
+            # Use QoS 0 for fire-and-forget to prevent stale retained messages
+            if addon.mqtt_client:
+                try:
+                    state_topic = f"{addon.state_prefix}/brightness/state"
+                    addon.mqtt_client.publish(
+                        state_topic, str(brightness_value), qos=0, retain=False
+                    )
+                except Exception as e:
+                    logger.debug(f"Failed to publish brightness state: {e}")
     except Exception as e:
         logger.error(f"set_brightness error: {e}", exc_info=True)
 
