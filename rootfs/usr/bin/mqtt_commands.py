@@ -167,8 +167,10 @@ def handle_command_set_brightness(addon: "MeticulousAddon", payload: str):
         logger.error("Cannot set brightness: API not connected")
         return
     try:
+        logger.debug(f"set_brightness raw payload: {payload}")
         data = json.loads(payload) if payload.startswith("{") else {"brightness": int(payload)}
         brightness_value = int(data.get("brightness", 50))
+        logger.debug(f"set_brightness parsed: data={data}, brightness_value={brightness_value}")
 
         # Normalize brightness from 0-100 (HA range) to 0-1 (pyMeticulous range)
         brightness_normalized = float(brightness_value) / 100.0
@@ -187,8 +189,9 @@ def handle_command_set_brightness(addon: "MeticulousAddon", payload: str):
             logger.error(f"set_brightness failed: {result.error}")
         else:
             logger.info(f"set_brightness: Success ({brightness_value}%)")
-            # Immediately publish the new brightness state (in 0-100 range for HA)
-            _run_or_schedule(addon.publish_to_homeassistant({"brightness": brightness_value}))
+            # Don't immediately publish state back - let state updates come from machine
+            # publishing back to MQTT can cause feedback loops with retained messages
+            # _run_or_schedule(addon.publish_to_homeassistant({"brightness": brightness_value}))
     except Exception as e:
         logger.error(f"set_brightness error: {e}", exc_info=True)
 
