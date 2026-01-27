@@ -1577,9 +1577,13 @@ class MeticulousAddon:
     def _handle_settings_change_event(self, settings: Dict):
         """Handle settings change events from Socket.IO (e.g., brightness)."""
         logger.debug(f"Settings change event received: {settings}")
-        # Publish all settings through normal routing (includes delta filtering)
-        if self.loop:
-            asyncio.run_coroutine_threadsafe(self.publish_to_homeassistant(settings), self.loop)
+        # Filter out brightness - it's handled specially by the command handler
+        # which publishes immediately without retain to avoid feedback loops
+        filtered_settings = {k: v for k, v in settings.items() if k != "brightness"}
+        if filtered_settings and self.loop:
+            asyncio.run_coroutine_threadsafe(
+                self.publish_to_homeassistant(filtered_settings), self.loop
+            )
 
     def _handle_communication_event(self, comm: Any):
         """Handle communication events from Socket.IO."""
