@@ -2,6 +2,16 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.26.11] - 2026-01-26
+
+### 🔧 Fixes
+- **Fixed brightness 1-step lag (root cause)** - Device has command processing queue. Publishing from command handler publishes before device processes command, so HA sees previous value. Now brightness only published from Socket.IO `onSettingsChange` event when device confirms actual change
+
+## [0.26.10] - 2026-01-26
+
+### 🔧 Fixes
+- **Fixed brightness 1-step lag (attempt 2)** - Publish brightness with `retain=True` to overwrite stale retained values on the broker. `retain=False` doesn't clear old retained messages, so the broker keeps serving the old value to new subscribers
+
 ## [0.26.9] - 2026-01-26
 
 ### 📝 Improvements

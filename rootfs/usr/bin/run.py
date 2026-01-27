@@ -1562,9 +1562,19 @@ class MeticulousAddon:
         # Tracked but not logged per event
 
     def _handle_settings_change_event(self, settings: Dict):
-        """Handle settings change events from Socket.IO (e.g., brightness)."""
-        # Filter out brightness - it's handled specially by the command handler
-        # which publishes immediately without retain to avoid feedback loops
+        """Handle settings change events from Socket.IO (e.g., brightness, auto-dim)."""
+        # Publish brightness when device state changes (including auto-dim)
+        if "brightness" in settings and self.mqtt_client:
+            try:
+                brightness_value = settings["brightness"]
+                state_topic = f"{self.state_prefix}/brightness/state"
+                # Publish the actual device state with retain to persist it
+                self.mqtt_client.publish(state_topic, str(brightness_value), qos=1, retain=True)
+                logger.debug(f"Published brightness state from device: {brightness_value}")
+            except Exception as e:
+                logger.debug(f"Failed to publish brightness state: {e}")
+
+        # Publish other settings changes
         filtered_settings = {k: v for k, v in settings.items() if k != "brightness"}
         if filtered_settings and self.loop:
             asyncio.run_coroutine_threadsafe(

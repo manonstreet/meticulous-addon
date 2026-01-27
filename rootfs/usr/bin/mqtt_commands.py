@@ -189,16 +189,9 @@ def handle_command_set_brightness(addon: "MeticulousAddon", payload: str):
             logger.error(f"set_brightness failed: {result.error}")
         else:
             logger.info(f"set_brightness: Success ({brightness_value}%)")
-            # Publish state update without retain, but with QoS 1 to guarantee delivery
-            # QoS 1 ensures the message reaches the MQTT broker before Socket.IO stale values arrive
-            if addon.mqtt_client:
-                try:
-                    state_topic = f"{addon.state_prefix}/brightness/state"
-                    addon.mqtt_client.publish(
-                        state_topic, str(brightness_value), qos=1, retain=False
-                    )
-                except Exception as e:
-                    logger.info(f"Failed to publish brightness state: {e}")
+            # DON'T publish state here - wait for Socket.IO onSettingsChange event
+            # to confirm device actually changed. Publishing the requested value
+            # before device confirms causes the 1-behind lag when device queues commands
     except Exception as e:
         logger.error(f"set_brightness error: {e}", exc_info=True)
 
