@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.26.6] - 2026-01-26
+
+### 🔧 Fixes
+- **Fixed brightness command lag** - Removed immediate state publish that was creating MQTT feedback loop causing commands to execute one step behind
+
 ## [0.26.5] - 2026-01-26
 
 ### 🔧 Fixes
