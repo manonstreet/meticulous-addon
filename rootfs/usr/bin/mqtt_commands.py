@@ -182,16 +182,21 @@ def handle_command_set_brightness(addon: "MeticulousAddon", payload: str):
             interpolation=str(data.get("interpolation", "curve")),
             animation_time=int(data.get("animation_time", 500)),  # Keep as ms
         )
+
+        # Workaround for device queue lag: send the command twice
+        # Device processes commands asynchronously with a queue, so:
+        # 1st send: device returns old value in next event (queue lag)
+        # 2nd send: device now returns correct value from 1st command
         result = addon.api.set_brightness(brightness_request)
+        if not isinstance(result, APIError):
+            # Send again to overcome queue lag
+            result = addon.api.set_brightness(brightness_request)
 
         # set_brightness returns None on success, Optional[APIError] on failure
         if isinstance(result, APIError):
             logger.error(f"set_brightness failed: {result.error}")
         else:
             logger.info(f"set_brightness: Success ({brightness_value}%)")
-            # DON'T publish state here - wait for Socket.IO onSettingsChange event
-            # to confirm device actually changed. Publishing the requested value
-            # before device confirms causes the 1-behind lag when device queues commands
     except Exception as e:
         logger.error(f"set_brightness error: {e}", exc_info=True)
 

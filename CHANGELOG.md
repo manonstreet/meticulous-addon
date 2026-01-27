@@ -2,6 +2,18 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.27.0] - 2026-01-26
+
+### 🔧 Fixes
+- **Fixed brightness 1-step lag (queue workaround)** - Device has command processing queue that causes 1-step lag. Implemented workaround: send brightness commands twice to API so device queue returns correct value on first Socket.IO event (no more lag)
+- **Fixed brightness resets to 50%** - Added `brightness_initialized` flag to prevent re-initialization on MQTT reconnects. Brightness now only initializes once at true startup.
+- **Improved delta filtering** - Pass initial brightness through delta filter to properly set baseline, preventing first update from being blocked.
+
+## [0.26.13] - 2026-01-26
+
+### 🔧 Fixes
+- **Fixed brightness oscillation and denormalization** - Device returns brightness as 0-1 (normalized), now converting to 0-100 for Home Assistant. Also applies delta filtering (publish only when change >= 1) to prevent oscillation from rounding between 49-50.
+
 ## [0.26.12] - 2026-01-26
 
 ### 🔧 Fixes
