@@ -1,0 +1,5 @@
+# CODEOWNERS file to restrict approval authority for this repo
+# Anyone can submit PRs, but only code owners can approve and merge
+
+# Default owner for all files in the repo
+* @nickwilsonr
