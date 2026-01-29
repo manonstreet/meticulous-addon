@@ -26,16 +26,22 @@ def mqtt_on_message(addon: "MeticulousAddon", client, userdata, msg):
         payload = msg.payload.decode("utf-8")
         logger.debug(f"MQTT command received: {topic} = {payload}")
 
-        if topic == f"{addon.command_prefix}/start_brew":
-            handle_command_start_brew(addon)
-        elif topic == f"{addon.command_prefix}/stop_brew":
-            handle_command_stop_brew(addon)
-        elif topic == f"{addon.command_prefix}/continue_brew":
-            handle_command_continue_brew(addon)
+        if topic == f"{addon.command_prefix}/start_shot":
+            handle_command_start_shot(addon)
+        elif topic == f"{addon.command_prefix}/stop_shot":
+            handle_command_stop_shot(addon)
+        elif topic == f"{addon.command_prefix}/continue_shot":
+            handle_command_continue_shot(addon)
+        elif topic == f"{addon.command_prefix}/abort_shot":
+            handle_command_abort_shot(addon)
         elif topic == f"{addon.command_prefix}/preheat":
             handle_command_preheat(addon)
         elif topic == f"{addon.command_prefix}/tare_scale":
             handle_command_tare_scale(addon)
+        elif topic == f"{addon.command_prefix}/home_plunger":
+            handle_command_home_plunger(addon)
+        elif topic == f"{addon.command_prefix}/purge":
+            handle_command_purge(addon)
         elif topic == f"{addon.command_prefix}/load_profile":
             handle_command_load_profile(addon, payload)
         elif topic == f"{addon.command_prefix}/set_brightness":
@@ -48,54 +54,54 @@ def mqtt_on_message(addon: "MeticulousAddon", client, userdata, msg):
         logger.error(f"Error handling MQTT message: {e}", exc_info=True)
 
 
-def handle_command_start_brew(addon: "MeticulousAddon"):
+def handle_command_start_shot(addon: "MeticulousAddon"):
     if not addon.api:
-        logger.error("Cannot start brew: API not connected")
+        logger.error("Cannot start shot: API not connected")
         return
     try:
         logger.debug("Executing START action...")
         result = addon.api.execute_action(ActionType.START)
         logger.debug(f"execute_action returned: {result}, type: {type(result)}")
         if isinstance(result, APIError):
-            logger.error(f"start_brew failed: {result.error}")
+            logger.error(f"start_shot failed: {result.error}")
         elif result.status != "ok":
-            logger.error(f"start_brew failed: action returned status '{result.status}'")
+            logger.error(f"start_shot failed: action returned status '{result.status}'")
         else:
-            logger.info("start_brew: Success")
+            logger.info("start_shot: Success")
     except Exception as e:
-        logger.error(f"start_brew error: {e}", exc_info=True)
+        logger.error(f"start_shot error: {e}", exc_info=True)
 
 
-def handle_command_stop_brew(addon: "MeticulousAddon"):
+def handle_command_stop_shot(addon: "MeticulousAddon"):
     if not addon.api:
-        logger.error("Cannot stop brew: API not connected")
+        logger.error("Cannot stop shot: API not connected")
         return
     try:
         result = addon.api.execute_action(ActionType.STOP)
         if isinstance(result, APIError):
-            logger.error(f"stop_brew failed: {result.error}")
+            logger.error(f"stop_shot failed: {result.error}")
         elif result.status != "ok":
-            logger.error(f"stop_brew failed: action returned status '{result.status}'")
+            logger.error(f"stop_shot failed: action returned status '{result.status}'")
         else:
-            logger.info("stop_brew: Success")
+            logger.info("stop_shot: Success")
     except Exception as e:
-        logger.error(f"stop_brew error: {e}", exc_info=True)
+        logger.error(f"stop_shot error: {e}", exc_info=True)
 
 
-def handle_command_continue_brew(addon: "MeticulousAddon"):
+def handle_command_continue_shot(addon: "MeticulousAddon"):
     if not addon.api:
-        logger.error("Cannot continue brew: API not connected")
+        logger.error("Cannot continue shot: API not connected")
         return
     try:
         result = addon.api.execute_action(ActionType.CONTINUE)
         if isinstance(result, APIError):
-            logger.error(f"continue_brew failed: {result.error}")
+            logger.error(f"continue_shot failed: {result.error}")
         elif result.status != "ok":
-            logger.error(f"continue_brew failed: action returned status '{result.status}'")
+            logger.error(f"continue_shot failed: action returned status '{result.status}'")
         else:
-            logger.info("continue_brew: Success")
+            logger.info("continue_shot: Success")
     except Exception as e:
-        logger.error(f"continue_brew error: {e}", exc_info=True)
+        logger.error(f"continue_shot error: {e}", exc_info=True)
 
 
 def handle_command_preheat(addon: "MeticulousAddon"):
@@ -130,6 +136,60 @@ def handle_command_tare_scale(addon: "MeticulousAddon"):
             logger.info("tare_scale: Success")
     except Exception as e:
         logger.error(f"tare_scale error: {e}", exc_info=True)
+
+
+def handle_command_abort_shot(addon: "MeticulousAddon"):
+    if not addon.api:
+        logger.error("Cannot abort shot: API not connected")
+        return
+    try:
+        logger.debug("Executing ABORT action...")
+        result = addon.api.execute_action(ActionType.ABORT)
+        logger.debug(f"execute_action returned: {result}, type: {type(result)}")
+        if isinstance(result, APIError):
+            logger.error(f"abort_shot failed: {result.error}")
+        elif result.status != "ok":
+            logger.error(f"abort_shot failed: action returned status '{result.status}'")
+        else:
+            logger.info("abort_shot: Success")
+    except Exception as e:
+        logger.error(f"abort_shot error: {e}", exc_info=True)
+
+
+def handle_command_home_plunger(addon: "MeticulousAddon"):
+    if not addon.api:
+        logger.error("Cannot home plunger: API not connected")
+        return
+    try:
+        logger.debug("Executing HOME action...")
+        result = addon.api.execute_action(ActionType.HOME)
+        logger.debug(f"execute_action returned: {result}, type: {type(result)}")
+        if isinstance(result, APIError):
+            logger.error(f"home_plunger failed: {result.error}")
+        elif result.status != "ok":
+            logger.error(f"home_plunger failed: action returned status '{result.status}'")
+        else:
+            logger.info("home_plunger: Success")
+    except Exception as e:
+        logger.error(f"home_plunger error: {e}", exc_info=True)
+
+
+def handle_command_purge(addon: "MeticulousAddon"):
+    if not addon.api:
+        logger.error("Cannot purge: API not connected")
+        return
+    try:
+        logger.debug("Executing PURGE action...")
+        result = addon.api.execute_action(ActionType.PURGE)
+        logger.debug(f"execute_action returned: {result}, type: {type(result)}")
+        if isinstance(result, APIError):
+            logger.error(f"purge failed: {result.error}")
+        elif result.status != "ok":
+            logger.error(f"purge failed: action returned status '{result.status}'")
+        else:
+            logger.info("purge: Success")
+    except Exception as e:
+        logger.error(f"purge error: {e}", exc_info=True)
 
 
 def handle_command_load_profile(addon: "MeticulousAddon", profile_name: str):

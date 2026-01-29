@@ -43,28 +43,31 @@ automation:
 								entity_id: input_select.current_coffee_bean
 								state: "Ethiopia Light Roast"
 						sequence:
-							- service: meticulous.load_profile
+							- service: mqtt.publish
 								data:
-									profile_id: "ethiopia-profile-id"
+									topic: meticulous_espresso/command/load_profile
+									payload: "ethiopia-profile-id"
 					- conditions:
 							- condition: state
 								entity_id: input_select.current_coffee_bean
 								state: "Colombia Medium Roast"
 						sequence:
-							- service: meticulous.load_profile
+							- service: mqtt.publish
 								data:
-									profile_id: "colombia-profile-id"
+									topic: meticulous_espresso/command/load_profile
+									payload: "colombia-profile-id"
 					- conditions:
 							- condition: state
 								entity_id: input_select.current_coffee_bean
 								state: "Italian Dark Roast"
 						sequence:
-							- service: meticulous.load_profile
+							- service: mqtt.publish
 								data:
-									profile_id: "italian-profile-id"
+									topic: meticulous_espresso/command/load_profile
+									payload: "italian-profile-id"
 			- service: notify.mobile_app_phone
 				data:
-					message: "Profile loaded: {{ states('sensor.meticulous_active_profile') }}"
+					message: "Profile loaded: {{ states('select.meticulous_active_profile') }}"
 ```
 
 ### Quick Brew Button
@@ -76,7 +79,10 @@ script:
 	meticulous_quick_brew:
 		alias: "Meticulous: Quick Brew"
 		sequence:
-			- service: meticulous.start_brew
+			- service: mqtt.publish
+				data:
+					topic: meticulous_espresso/command/start_brew
+					payload: ""
 			- service: notify.mobile_app_phone
 				data:
 					message: "☕ Brewing started!"
@@ -181,33 +187,37 @@ Rate your shot quality directly from the notification.
 automation:
 	- id: rate_shot_good
 		alias: "Meticulous: Rate Shot Good"
+		description: "Note: Rating via buttons is for logging. Machine doesn't have a rate API endpoint."
 		trigger:
 			- platform: event
 				event_type: mobile_app_notification_action
 				event_data:
 					action: "RATE_GOOD"
 		action:
-			- service: meticulous.rate_last_shot
-				data:
-					rating: "like"
 			- service: notify.mobile_app_phone
 				data:
 					message: "Shot rated 👍 - Great pull!"
+			- service: logbook.log
+				data:
+					name: "Shot Rating"
+					message: "Shot rated as good 👍"
 
 	- id: rate_shot_bad
 		alias: "Meticulous: Rate Shot Bad"
+		description: "Note: Rating via buttons is for logging. Machine doesn't have a rate API endpoint."
 		trigger:
 			- platform: event
 				event_type: mobile_app_notification_action
 				event_data:
 					action: "RATE_BAD"
 		action:
-			- service: meticulous.rate_last_shot
-				data:
-					rating: "dislike"
 			- service: notify.mobile_app_phone
 				data:
 					message: "Shot rated 👎 - Try adjusting grind or profile"
+			- service: logbook.log
+				data:
+					name: "Shot Rating"
+					message: "Shot rated as bad 👎"
 ```
 
 ### Pressure Anomaly Alert
@@ -270,33 +280,37 @@ automation:
 								entity_id: input_select.meticulous_profile
 								state: "Light Roast - High Temp"
 						sequence:
-							- service: meticulous.load_profile
+							- service: mqtt.publish
 								data:
-									profile_id: "light-roast-id"
+									topic: meticulous_espresso/command/load_profile
+									payload: "light-roast-id"
 					- conditions:
 							- condition: state
 								entity_id: input_select.meticulous_profile
 								state: "Medium Roast - Balanced"
 						sequence:
-							- service: meticulous.load_profile
+							- service: mqtt.publish
 								data:
-									profile_id: "medium-roast-id"
+									topic: meticulous_espresso/command/load_profile
+									payload: "medium-roast-id"
 					- conditions:
 							- condition: state
 								entity_id: input_select.meticulous_profile
 								state: "Dark Roast - Lower Temp"
 						sequence:
-							- service: meticulous.load_profile
+							- service: mqtt.publish
 								data:
-									profile_id: "dark-roast-id"
+									topic: meticulous_espresso/command/load_profile
+									payload: "dark-roast-id"
 					- conditions:
 							- condition: state
 								entity_id: input_select.meticulous_profile
 								state: "Experimental"
 						sequence:
-							- service: meticulous.load_profile
+							- service: mqtt.publish
 								data:
-									profile_id: "experimental-id"
+									topic: meticulous_espresso/command/load_profile
+									payload: "experimental-id"
 			- service: notify.mobile_app_phone
 				data:
 					message: "Profile loaded: {{ trigger.to_state.state }}"
@@ -320,10 +334,10 @@ automation:
 				entity_id: binary_sensor.kitchen_motion
 				to: "on"
 		action:
-			- service: meticulous.set_brightness
+			- service: mqtt.publish
 				data:
-					brightness: 80
-					animation_time: 500
+					topic: meticulous_espresso/command/set_brightness
+					payload: "80"
 
 	- id: meticulous_no_motion_dim
 		alias: "Meticulous: No Motion - Dim"
@@ -335,10 +349,10 @@ automation:
 				for:
 					minutes: 5
 		action:
-			- service: meticulous.set_brightness
+			- service: mqtt.publish
 				data:
-					brightness: 5
-					animation_time: 1000
+					topic: meticulous_espresso/command/set_brightness
+					payload: "5"
 ```
 
 ### Emergency Stop Button
@@ -350,7 +364,10 @@ script:
 	meticulous_emergency_stop:
 		alias: "Meticulous: Emergency Stop"
 		sequence:
-			- service: meticulous.stop_brew
+			- service: mqtt.publish
+				data:
+					topic: meticulous_espresso/command/stop_brew
+					payload: ""
 			- service: notify.mobile_app_phone
 				data:
 					message: "⛔ Brew stopped"
@@ -557,11 +574,15 @@ automation:
 				entity_id: input_boolean.brew_turbo_bloom
 				to: "on"
 		action:
-			- service: meticulous.load_profile
+			- service: mqtt.publish
 				data:
-					profile_id: "turbo-bloom-id"
+					topic: meticulous_espresso/command/load_profile
+					payload: "turbo-bloom-id"
 			- delay: "00:00:01"
-			- service: meticulous.start_brew
+			- service: mqtt.publish
+				data:
+					topic: meticulous_espresso/command/start_brew
+					payload: ""
 			- delay: "00:00:01"
 			- service: input_boolean.turn_off
 				target:
@@ -574,11 +595,15 @@ automation:
 				entity_id: input_boolean.brew_traditional_italian
 				to: "on"
 		action:
-			- service: meticulous.load_profile
+			- service: mqtt.publish
 				data:
-					profile_id: "traditional-italian-id"
+					topic: meticulous_espresso/command/load_profile
+					payload: "traditional-italian-id"
 			- delay: "00:00:01"
-			- service: meticulous.start_brew
+			- service: mqtt.publish
+				data:
+					topic: meticulous_espresso/command/start_brew
+					payload: ""
 			- delay: "00:00:01"
 			- service: input_boolean.turn_off
 				target:
@@ -591,11 +616,15 @@ automation:
 				entity_id: input_boolean.brew_soup
 				to: "on"
 		action:
-			- service: meticulous.load_profile
+			- service: mqtt.publish
 				data:
-					profile_id: "soup-id"
+					topic: meticulous_espresso/command/load_profile
+					payload: "soup-id"
 			- delay: "00:00:01"
-			- service: meticulous.start_brew
+			- service: mqtt.publish
+				data:
+					topic: meticulous_espresso/command/start_brew
+					payload: ""
 			- delay: "00:00:01"
 			- service: input_boolean.turn_off
 				target:
@@ -608,11 +637,15 @@ automation:
 				entity_id: input_boolean.brew_light_roast
 				to: "on"
 		action:
-			- service: meticulous.load_profile
+			- service: mqtt.publish
 				data:
-					profile_id: "light-roast-id"
+					topic: meticulous_espresso/command/load_profile
+					payload: "light-roast-id"
 			- delay: "00:00:01"
-			- service: meticulous.start_brew
+			- service: mqtt.publish
+				data:
+					topic: meticulous_espresso/command/start_brew
+					payload: ""
 			- delay: "00:00:01"
 			- service: input_boolean.turn_off
 				target:
@@ -655,9 +688,10 @@ automation:
 				entity_id: input_boolean.load_turbo_bloom_profile
 				to: "on"
 		action:
-			- service: meticulous.load_profile
+			- service: mqtt.publish
 				data:
-					profile_id: "turbo-bloom-id"
+					topic: meticulous_espresso/command/load_profile
+					payload: "turbo-bloom-id"
 			- service: notify.mobile_app_phone
 				data:
 					message: "Turbo Bloom profile loaded"
@@ -673,9 +707,10 @@ automation:
 				entity_id: input_boolean.load_traditional_italian_profile
 				to: "on"
 		action:
-			- service: meticulous.load_profile
+			- service: mqtt.publish
 				data:
-					profile_id: "traditional-italian-id"
+					topic: meticulous_espresso/command/load_profile
+					payload: "traditional-italian-id"
 			- service: notify.mobile_app_phone
 				data:
 					message: "Traditional Italian profile loaded"
@@ -715,9 +750,10 @@ automation:
 								entity_id: person.user2
 								state: "not_home"
 						sequence:
-							- service: meticulous.load_profile
+							- service: mqtt.publish
 								data:
-									profile_id: "user1-favorite-id"
+									topic: meticulous_espresso/command/load_profile
+									payload: "user1-favorite-id"
 							- service: notify.mobile_app_phone
 								data:
 									message: "Loaded User 1's profile"
@@ -729,9 +765,10 @@ automation:
 								entity_id: person.user1
 								state: "not_home"
 						sequence:
-							- service: meticulous.load_profile
+							- service: mqtt.publish
 								data:
-									profile_id: "user2-favorite-id"
+									topic: meticulous_espresso/command/load_profile
+									payload: "user2-favorite-id"
 							- service: notify.mobile_app_phone
 								data:
 									message: "Loaded User 2's profile"
@@ -869,7 +906,10 @@ cards:
 				icon: mdi:scale-balance
 				tap_action:
 					action: call-service
-					service: meticulous.tare_scale
+					service: mqtt.publish
+					service_data:
+						topic: meticulous_espresso/command/tare_scale
+						payload: ""
 			- type: button
 				name: "Start"
 				icon: mdi:play-circle
@@ -881,7 +921,10 @@ cards:
 				icon: mdi:stop-circle
 				tap_action:
 					action: call-service
-					service: meticulous.stop_brew
+					service: mqtt.publish
+					service_data:
+						topic: meticulous_espresso/command/stop_brew
+						payload: ""
 
 	# Profile Selector
 	- type: entities

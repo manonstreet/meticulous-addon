@@ -2,6 +2,22 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.28.0] - 2026-01-27
+
+### Breaking Changes
+⚠️ **Command names updated for clarity** - Commands now use "shot" terminology consistently:
+- `start_brew` → `start_shot` — Start a shot (load & execute profile)
+- `stop_brew` → `stop_shot` — Stop the plunger immediately mid-shot
+- `continue_brew` → `continue_shot` — Resume a paused shot
+
+If you have Home Assistant automations using these commands, update them to use the new names.
+
+### New Features
+- **`abort_shot`** — Abort the current profile and retract the plunger (new action)
+- **`home_plunger`** — Reset the plunger to home position (new action)
+- **`purge`** — Flush water through the group head (new action)
+- **Command descriptions** — All commands now display descriptions in Home Assistant's "More Info" UI to help you understand what each control does
+
 ## [0.27.1] - 2026-01-26
 
 ### Fixes

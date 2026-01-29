@@ -99,14 +99,21 @@ Machine API → Socket.IO + REST → Add-on → MQTT → Home Assistant
 **Add-on Options (config.yaml):**
 ```json
 {
-  "machine_ip": "192.168.1.100",    // IP or hostname (required)
-  "scan_interval": 30,               // 10-300 seconds
-  "debug": false,                    // Enable debug logging
-  "mqtt_enabled": true,              // Enable MQTT discovery
-  "mqtt_host": "core-mosquitto",     // MQTT broker (auto-detected)
-  "mqtt_port": 1883,                 // MQTT port
-  "mqtt_username": "",               // Auto-fetched from HA MQTT integration
-  "mqtt_password": ""                // Auto-fetched from HA MQTT integration
+  "machine_ip": "192.168.1.100",              // IP or hostname (required)
+  "enable_delta_filtering": true,             // Filter small sensor changes
+  "temperature_delta": 0.5,                   // °C threshold
+  "pressure_delta": 0.2,                      // bar threshold
+  "flow_delta": 0.1,                          // ml/s threshold
+  "weight_delta": 0.1,                        // g threshold
+  "time_delta": 0.1,                          // s threshold
+  "voltage_delta": 1.0,                       // V threshold
+  "stale_data_refresh_interval": 24,          // hours (1-168)
+  "debug": false,                             // Enable debug logging
+  "mqtt_enabled": true,                       // Enable MQTT discovery
+  "mqtt_host": "core-mosquitto",              // MQTT broker
+  "mqtt_port": 1883,                          // MQTT port
+  "mqtt_username": "",                        // Auto-fetched from HA
+  "mqtt_password": ""                         // Auto-fetched from HA
 }
 ```
 
@@ -175,9 +182,9 @@ See [tests/README.md](../tests/README.md) for more details.
 
 **Phase 1 (MVP - Current):**
 - Socket.IO connection with auto-reconnect
-- 22 core sensors (status, temps, brewing, profile, stats, device)
-- 8 basic commands (brew, preheat, tare, brightness, sounds)
-- MQTT discovery
+- 24 core sensors (status, temps, brewing, profile, stats, device, connectivity)
+- 8 commands (brew, preheat, tare, profile load, brightness, sounds)
+- MQTT discovery with delta filtering
 
 **Phase 2 (Enhanced):**
 - Profile listing and selection UI

@@ -1,50 +1,51 @@
 # Test Suite Structure for Meticulous Espresso Add-on
 
-
-This directory contains all tests and developer scripts for the add-on, organized by function:
-
+This directory contains all tests and developer scripts for the add-on, organized by function.
 
 ## Integration Tests (`integration/`)
-- End-to-end, API, and persistence tests
-- Validate the add-on as a whole, including API calls, config, and sensor state
-- Example files:
-	- `test_addon_integration.py`
-	- `test_sensor_population.py`
-	- `test_pymeticulous_030_updates.py`
-
+- End-to-end tests that validate the add-on as a whole
+- Tests include API connectivity, MQTT discovery, sensor population, and state management
+- Files:
+  - `test_addon_integration.py` — Core integration tests
+  - `test_sensor_population.py` — Sensor state initialization and updates
+  - `test_pymeticulous_030_updates.py` — pyMeticulous 0.3.0+ compatibility
 
 ## Unit Tests (`unit/`)
-- Isolated logic and handler tests
-- Validate individual functions, command handlers, and error handling
-- Example files:
-  - `test_mqtt_commands.py`
-## Manual/Dev Scripts
+- Isolated tests for individual functions and handlers
+- Tests MQTT command execution, error handling, and edge cases
+- Files:
+  - `test_mqtt_commands.py` — MQTT command handlers (start/stop brew, brightness, profile loading, etc.)
+
+## Manual & Dev Scripts
 
 ### `dev_scripts/`
-- Developer scripts for manual or ad-hoc testing (not run by automated test suite)
-- Example: `test_socketio_events.py` (Socket.IO event monitor)
+Developer scripts for manual testing (not run by automated test suite):
+- `test_socketio_events.py` — Monitors Socket.IO events from the machine
 
 ### `manual/`
-- Manual API endpoint test scripts
-- Example: `test_profiles_endpoint.py`, `test_correct_endpoint.py`
+Manual endpoint testing scripts:
+- `test_correct_endpoint.py` — Test machine API endpoint connectivity
+- `test_profiles_endpoint.py` — Test profile loading endpoint
 
-## Running All Tests
+## Running Tests
 
-
-Use the provided `run_tests.py` script to run all unit and integration tests:
-
+### Run all tests
 ```sh
 python tests/run_tests.py
 ```
 
-Or run a specific test file with unittest:
-
+### Run a specific test file
 ```sh
 python -m unittest tests/integration/test_addon_integration.py
+python -m unittest tests/integration/test_sensor_population.py
 python -m unittest tests/unit/test_mqtt_commands.py
 ```
 
+### Run tests from VS Code
+Use the provided task: **Run sensor population integration tests** to execute the test suite.
+
 ## Adding New Tests
-- Place new integration (system-level) tests in `integration/`
-- Place new unit (logic/handler) tests in `unit/`
-- Use the provided examples as templates
+
+- **Integration tests** (system-level): Add to `integration/`
+- **Unit tests** (individual functions): Add to `unit/`
+- Use existing test files as templates for structure and patterns

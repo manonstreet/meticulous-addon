@@ -19,14 +19,14 @@ The Meticulous Home Assistant add-on provides real-time integration with Meticul
 ✅ **Health Metrics**: Diagnostic data publishing (uptime, reconnect count, error tracking)
 ✅ **Graceful Degradation**: Availability topic with online/offline states
 
-### Sensors (25 total)
-- **Machine Status**: connected, state
+### Sensors (24 total)
+- **Machine Status**: connected, state, brewing
 - **Temperature**: boiler, brew head, target, external_temp_1, external_temp_2
-- **Brewing**: brewing flag, pressure, flow rate, shot timer, shot weight, target weight
+- **Brewing**: pressure, flow rate, shot timer, shot weight, target weight
 - **Profile**: active profile name, author
 - **Settings**: sounds enabled, brightness
 - **Statistics**: total shots, last shot name/rating/time
-- **Device**: firmware version, software version, model, serial, voltage
+- **Device**: firmware version, software version, voltage
 
 ### Commands (8 total via MQTT)
 - `meticulous_espresso/command/start_brew`
@@ -39,8 +39,10 @@ The Meticulous Home Assistant add-on provides real-time integration with Meticul
 - `meticulous_espresso/command/enable_sounds` (payload: true/false)
 
 ### Configuration Options
-- **Machine**: `machine_ip` (IP or hostname), `scan_interval` (10-300s)
-- **MQTT**: `mqtt_enabled`, `mqtt_host`, `mqtt_port`, `mqtt_username`, `mqtt_password` (auto-fetched from HA)
+- **Machine**: `machine_ip` (IP or hostname)
+- **Filtering**: `enable_delta_filtering` (true/false), temperature/pressure/flow/weight/time/voltage deltas
+- **Refresh**: `stale_data_refresh_interval` (1-168 hours, default 24)
+- **MQTT**: `mqtt_enabled`, `mqtt_host`, `mqtt_port`, `mqtt_username`, `mqtt_password`
 - **Logging**: `debug` (boolean)
 
 ## File Structure
@@ -85,7 +87,7 @@ meticulous-addon/
 - Triggers sensor updates (update_profile_info, update_settings) after state changes
 
 ### Health Metrics
-- Published to `meticulous_espresso/health` every scan_interval
+- Published to `meticulous_espresso/health` every stale_data_refresh_interval or periodic update
 - Tracks: uptime_seconds, reconnect_count, last_error, last_error_time, api_connected, socket_connected
 - Updated on reconnection failures in `maintain_socket_connection`
 
@@ -97,8 +99,8 @@ meticulous-addon/
 ### Polling Updates
 - `update_profile_info()`: get_last_profile() → active_profile, profile_author, target_temperature, target_weight
 - `update_statistics()`: get_history_statistics(), get_last_shot() → total_shots, last_shot_*
-- `update_settings()`: get_settings() → sounds_enabled (brightness TODO: not in Settings object)
-- Runs every `scan_interval` seconds (default 30s)
+- `update_settings()`: get_settings() → sounds_enabled (brightness from temperature events)
+- Runs periodically (frequency based on stale_data_refresh_interval)
 
 ---
 
@@ -108,11 +110,12 @@ meticulous-addon/
 
 Focus on home automation use cases rather than exposing the full API. Provide actionable data and controls that make sense in a smart home context.
 
-### Sensors (25 total)
+### Sensors (24 total)
 
-**Machine Status** (2 sensors)
+**Machine Status** (3 sensors)
+- `sensor.meticulous_connected`: Connection status (binary)
 - `sensor.meticulous_state`: Current state (idle, brewing, steaming, heating, preheating, error)
-- `binary_sensor.meticulous_brewing`: Extraction active flag (device_class: running)
+- `sensor.meticulous_brewing`: Extraction active flag (binary)
 
 **Temperature** (5 sensors)
 - `sensor.meticulous_boiler_temperature`: Boiler temp (device_class: temperature)

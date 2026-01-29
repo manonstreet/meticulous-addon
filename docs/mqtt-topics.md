@@ -15,23 +15,27 @@ homeassistant/binary_sensor/meticulous_espresso_brewing/config
 homeassistant/sensor/meticulous_espresso_state/config
 homeassistant/sensor/meticulous_espresso_boiler_temperature/config
 homeassistant/sensor/meticulous_espresso_brew_head_temperature/config
+homeassistant/sensor/meticulous_espresso_external_temp_1/config
+homeassistant/sensor/meticulous_espresso_external_temp_2/config
 homeassistant/sensor/meticulous_espresso_pressure/config
 homeassistant/sensor/meticulous_espresso_flow_rate/config
 homeassistant/sensor/meticulous_espresso_shot_timer/config
 homeassistant/sensor/meticulous_espresso_shot_weight/config
+homeassistant/sensor/meticulous_espresso_target_weight/config
 homeassistant/sensor/meticulous_espresso_active_profile/config
 homeassistant/sensor/meticulous_espresso_profile_author/config
 homeassistant/sensor/meticulous_espresso_target_temperature/config
-homeassistant/sensor/meticulous_espresso_target_weight/config
 homeassistant/sensor/meticulous_espresso_firmware_version/config
 homeassistant/sensor/meticulous_espresso_software_version/config
-homeassistant/sensor/meticulous_espresso_model/config
-homeassistant/sensor/meticulous_espresso_serial/config
 homeassistant/sensor/meticulous_espresso_voltage/config
-homeassistant/sensor/meticulous_espresso_sounds_enabled/config
+homeassistant/switch/meticulous_espresso_sounds_enabled/config
 homeassistant/sensor/meticulous_espresso_brightness/config
+homeassistant/number/meticulous_espresso_brightness/config
+homeassistant/select/meticulous_espresso_active_profile/config
 homeassistant/sensor/meticulous_espresso_total_shots/config
 homeassistant/sensor/meticulous_espresso_last_shot_name/config
+homeassistant/sensor/meticulous_espresso_last_shot_rating/config
+homeassistant/sensor/meticulous_espresso_last_shot_time/config
 ```
 
 ## State Topics
@@ -40,27 +44,29 @@ Published on updates to `meticulous_espresso/sensor/{key}/state`:
 
 ```
 meticulous_espresso/sensor/connected/state              → true/false
-meticulous_espresso/sensor/state/state                  → idle/brewing/heating/...
+meticulous_espresso/sensor/state/state                  → idle/brewing/heating/steaming/preheating/error
 meticulous_espresso/sensor/brewing/state                → true/false
 meticulous_espresso/sensor/boiler_temperature/state     → 93.2
 meticulous_espresso/sensor/brew_head_temperature/state  → 92.8
+meticulous_espresso/sensor/external_temp_1/state        → 25.5
+meticulous_espresso/sensor/external_temp_2/state        → 26.1
 meticulous_espresso/sensor/pressure/state               → 9.5
 meticulous_espresso/sensor/flow_rate/state              → 2.3
 meticulous_espresso/sensor/shot_timer/state             → 28.5
 meticulous_espresso/sensor/shot_weight/state            → 36.2
+meticulous_espresso/sensor/target_weight/state          → 36.0
+meticulous_espresso/sensor/target_temperature/state     → 93.0
 meticulous_espresso/sensor/active_profile/state         → "Morning Blend"
 meticulous_espresso/sensor/profile_author/state         → "Barista Joe"
-meticulous_espresso/sensor/target_temperature/state     → 93.0
-meticulous_espresso/sensor/target_weight/state          → 36.0
 meticulous_espresso/sensor/firmware_version/state       → "1.2.3"
 meticulous_espresso/sensor/software_version/state       → "2.1.0"
-meticulous_espresso/sensor/model/state                  → "Meticulous Pro"
-meticulous_espresso/sensor/serial/state                 → "ABC123456"
 meticulous_espresso/sensor/voltage/state                → 120
 meticulous_espresso/sensor/sounds_enabled/state         → true/false
 meticulous_espresso/sensor/brightness/state             → 75
 meticulous_espresso/sensor/total_shots/state            → 1234
 meticulous_espresso/sensor/last_shot_name/state         → "Espresso"
+meticulous_espresso/sensor/last_shot_rating/state       → "like"
+meticulous_espresso/sensor/last_shot_time/state         → "2024-01-15T10:30:00"
 ```
 
 ## Command Topics
@@ -69,11 +75,14 @@ Subscribe to `meticulous_espresso/command/#`:
 
 ### Simple Commands (no payload)
 ```
-meticulous_espresso/command/start_brew
-meticulous_espresso/command/stop_brew
-meticulous_espresso/command/continue_brew
-meticulous_espresso/command/preheat
-meticulous_espresso/command/tare_scale
+meticulous_espresso/command/start_shot      → Start a shot (load & execute profile)
+meticulous_espresso/command/stop_shot       → Stop the plunger immediately mid-shot
+meticulous_espresso/command/continue_shot   → Resume a paused shot
+meticulous_espresso/command/preheat         → Preheat water in chamber to target temperature
+meticulous_espresso/command/tare_scale      → Zero the scale
+meticulous_espresso/command/abort_shot      → Abort current profile and retract plunger
+meticulous_espresso/command/home_plunger    → Reset plunger to home position
+meticulous_espresso/command/purge           → Flush water through group head
 ```
 
 ### Commands with Payload
@@ -114,7 +123,7 @@ Published periodically to `meticulous_espresso/health`:
 
 ## Home Assistant Automation Examples
 
-### Start Brew at 7 AM
+### Start Shot at 7 AM
 ```yaml
 automation:
 	- alias: "Morning coffee"
@@ -124,7 +133,7 @@ automation:
 		action:
 			- service: mqtt.publish
 				data:
-					topic: meticulous_espresso/command/start_brew
+					topic: meticulous_espresso/command/start_shot
 ```
 
 ### Load Profile Based on Day
@@ -203,11 +212,20 @@ sensor:
 Using `mosquitto_pub` from the command line:
 
 ```bash
-# Start brewing
-mosquitto_pub -h localhost -t meticulous_espresso/command/start_brew -m ""
+# Start shot
+mosquitto_pub -h localhost -t meticulous_espresso/command/start_shot -m ""
 
-# Stop brewing
-mosquitto_pub -h localhost -t meticulous_espresso/command/stop_brew -m ""
+# Stop shot
+mosquitto_pub -h localhost -t meticulous_espresso/command/stop_shot -m ""
+
+# Abort shot
+mosquitto_pub -h localhost -t meticulous_espresso/command/abort_shot -m ""
+
+# Home plunger
+mosquitto_pub -h localhost -t meticulous_espresso/command/home_plunger -m ""
+
+# Purge group head
+mosquitto_pub -h localhost -t meticulous_espresso/command/purge -m ""
 
 # Set brightness
 mosquitto_pub -h localhost -t meticulous_espresso/command/set_brightness -m "75"

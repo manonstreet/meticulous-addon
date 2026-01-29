@@ -571,33 +571,57 @@ class MeticulousAddon:
     def _mqtt_command_mapping(self) -> Dict[str, Dict[str, str | int]]:
         """Return mapping of available commands for Home Assistant discovery."""
         return {
-            "start_brew": {
-                "name": "Start Brew",
+            "start_shot": {
+                "name": "Start Shot",
+                "description": "Start a shot (load & execute profile)",
                 "icon": "mdi:play",
-                "command_suffix": "start_brew",
+                "command_suffix": "start_shot",
             },
-            "stop_brew": {
-                "name": "Stop Brew",
+            "stop_shot": {
+                "name": "Stop Shot",
+                "description": "Stop the plunger immediately mid-shot",
                 "icon": "mdi:stop",
-                "command_suffix": "stop_brew",
+                "command_suffix": "stop_shot",
             },
-            "continue_brew": {
-                "name": "Continue Brew",
+            "continue_shot": {
+                "name": "Continue Shot",
+                "description": "Resume a paused shot",
                 "icon": "mdi:play-pause",
-                "command_suffix": "continue_brew",
+                "command_suffix": "continue_shot",
+            },
+            "abort_shot": {
+                "name": "Abort Shot",
+                "description": "Abort the current profile and retract plunger",
+                "icon": "mdi:cancel",
+                "command_suffix": "abort_shot",
             },
             "preheat": {
                 "name": "Preheat",
+                "description": "Preheat water in chamber to target temperature",
                 "icon": "mdi:fire",
                 "command_suffix": "preheat",
             },
             "tare_scale": {
                 "name": "Tare Scale",
+                "description": "Zero the scale",
                 "icon": "mdi:scale",
                 "command_suffix": "tare_scale",
             },
+            "home_plunger": {
+                "name": "Home Plunger",
+                "description": "Reset plunger to home position",
+                "icon": "mdi:home",
+                "command_suffix": "home_plunger",
+            },
+            "purge": {
+                "name": "Purge",
+                "description": "Flush water through group head",
+                "icon": "mdi:water-check",
+                "command_suffix": "purge",
+            },
             "set_brightness": {
                 "name": "Set Brightness",
+                "description": "Adjust display brightness",
                 "icon": "mdi:brightness-6",
                 "command_suffix": "set_brightness",
                 "type": "number",
