@@ -42,8 +42,10 @@ def mqtt_on_message(addon: "MeticulousAddon", client, userdata, msg):
             handle_command_home_plunger(addon)
         elif topic == f"{addon.command_prefix}/purge":
             handle_command_purge(addon)
-        elif topic == f"{addon.command_prefix}/load_profile":
-            handle_command_load_profile(addon, payload)
+        elif topic == f"{addon.command_prefix}/select_profile":
+            handle_command_select_profile(addon, payload)
+        elif topic == f"{addon.command_prefix}/run_profile":
+            handle_command_run_profile(addon)
         elif topic == f"{addon.command_prefix}/set_brightness":
             handle_command_set_brightness(addon, payload)
         elif topic == f"{addon.command_prefix}/enable_sounds":
@@ -192,12 +194,12 @@ def handle_command_purge(addon: "MeticulousAddon"):
         logger.error(f"purge error: {e}", exc_info=True)
 
 
-def handle_command_load_profile(addon: "MeticulousAddon", profile_name: str):
+def handle_command_select_profile(addon: "MeticulousAddon", profile_name: str):
     if not addon.api:
-        logger.error("Cannot load profile: API not connected")
+        logger.error("Cannot select profile: API not connected")
         return
     if not profile_name:
-        logger.error("load_profile: missing profile_name")
+        logger.error("select_profile: missing profile_name")
         return
     try:
         # profile_name comes from HA select (the value), but we need the ID
@@ -209,17 +211,46 @@ def handle_command_load_profile(addon: "MeticulousAddon", profile_name: str):
                 break
 
         if not profile_id:
-            logger.error(f"load_profile: Unknown profile name: {profile_name}")
+            logger.error(f"select_profile: Unknown profile name: {profile_name}")
             return
 
-        # Send profileHover to select the profile without starting a shot
-        # (load_profile_by_id() would actually start the shot, which we don't want)
+        # Send profileHover to highlight the profile on the machine UI
+        # This just selects it visually - user still needs to press button to load
         payload = {"id": profile_id, "from": "app", "type": "focus"}
         addon.api.send_profile_hover(payload)
         # send_profile_hover always returns None (not error on failure)
-        logger.info(f"load_profile: Successfully selected profile ({profile_name})")
+        logger.info(f"select_profile: Successfully highlighted profile ({profile_name})")
     except Exception as e:
-        logger.error(f"load_profile error: {e}", exc_info=True)
+        logger.error(f"select_profile error: {e}", exc_info=True)
+
+
+def handle_command_run_profile(addon: "MeticulousAddon"):
+    if not addon.api:
+        logger.error("Cannot run profile: API not connected")
+        return
+    if not addon.current_profile:
+        logger.error("run_profile: No profile currently selected")
+        return
+    try:
+        # Find the profile ID for the current profile name
+        profile_id = None
+        for pid, pname in addon.available_profiles.items():
+            if pname == addon.current_profile:
+                profile_id = pid
+                break
+
+        if not profile_id:
+            logger.error(f"run_profile: Unknown profile: {addon.current_profile}")
+            return
+
+        # Load and run the profile
+        result = addon.api.load_profile_by_id(profile_id)
+        if isinstance(result, APIError):
+            logger.error(f"run_profile failed: {result.error}")
+        else:
+            logger.info(f"run_profile: Successfully started profile ({addon.current_profile})")
+    except Exception as e:
+        logger.error(f"run_profile error: {e}", exc_info=True)
 
 
 def handle_command_set_brightness(addon: "MeticulousAddon", payload: str):
