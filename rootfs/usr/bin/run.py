@@ -651,13 +651,6 @@ class MeticulousAddon:
                 "icon": "mdi:cancel",
                 "command_suffix": "abort_shot",
             },
-            "select_profile": {
-                "name": "Select Profile",
-                "description": "Highlight a profile on the machine (press button to load)",
-                "icon": "mdi:checkbox-marked-circle",
-                "command_suffix": "select_profile",
-                "type": "select",
-            },
             "run_profile": {
                 "name": "Run Profile",
                 "description": "Load and preheat the currently selected profile",
