@@ -157,6 +157,16 @@ class MeticulousAddon:
         self.mqtt_username = self.config.get("mqtt_username") or None
         self.mqtt_password = self.config.get("mqtt_password") or None
         self.slug = "meticulous_espresso"
+
+        # Log MQTT configuration info
+        if self.mqtt_enabled:
+            if self.mqtt_username and self.mqtt_password:
+                logger.info(
+                    f"MQTT configured with manual credentials: "
+                    f"{self.mqtt_host}:{self.mqtt_port} (user={self.mqtt_username})"
+                )
+            else:
+                logger.debug("MQTT enabled but no credentials configured yet")
         self.availability_topic = f"{self.slug}/availability"
         self.state_prefix = f"{self.slug}/sensor"
         self.command_prefix = f"{self.slug}/command"
@@ -174,6 +184,13 @@ class MeticulousAddon:
 
     def _fetch_mqtt_credentials_from_supervisor(self):
         """Fetch MQTT credentials from Home Assistant Supervisor Services API."""
+        if not self.supervisor_token:
+            logger.debug(
+                "No supervisor token available - running in containerized mode without supervisor. "
+                "Using manually configured MQTT credentials if available."
+            )
+            return
+
         try:
             import requests
 
@@ -410,15 +427,7 @@ class MeticulousAddon:
         return float(delay)
 
     async def publish_to_homeassistant(self, sensor_data: Dict[str, Any]):
-        """Publish sensor data to Home Assistant via Supervisor API."""
-        if not self.supervisor_token:
-            logger.debug("No supervisor token - cannot publish to HA")
-            return
-
-        # TODO: Implement Home Assistant MQTT discovery and state publishing
-        # This will use the Home Assistant API or MQTT to create and update sensors
-        # For now, ensure non-blocking behavior
-
+        """Publish sensor data to Home Assistant via MQTT discovery."""
         # If MQTT is enabled, publish mapped sensor states
         if self.mqtt_enabled and self.mqtt_client:
             try:
@@ -447,6 +456,8 @@ class MeticulousAddon:
                 # Only log if fields were published (but don't spam the log)
             except Exception as e:
                 logger.warning(f"MQTT publish failed: {e}")
+        else:
+            logger.debug("MQTT not available - cannot publish to HA")
 
     async def report_error(self, title: str, message: str) -> None:
         """Report an error via logs and forward to HA notifications when possible."""

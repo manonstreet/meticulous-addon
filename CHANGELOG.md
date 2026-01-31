@@ -2,6 +2,11 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.28.3] - 2026-01-31
+
+### Fixes
+- **Containerized Home Assistant support** — Fixed MQTT integration for containerized Home Assistant installs without supervisor. The add-on now properly publishes entities when MQTT credentials are manually configured.
+
 ## [0.28.2] - 2026-01-29
 
 ### Improvements
