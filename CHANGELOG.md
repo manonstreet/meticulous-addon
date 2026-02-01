@@ -2,6 +2,12 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.30.1] - 2026-01-31
+
+### Fixes
+- **State capitalization** — Machine state is now always published with consistent capital casing (Idle, Heating, Preheating, etc. instead of idle, heating, preheating)
+- **State publication during preheat** — Machine state now updates in Home Assistant when preheating begins or ends, not just the preheat countdown timer
+
 ## [0.30.0] - 2026-01-31
 
 ### New Features
