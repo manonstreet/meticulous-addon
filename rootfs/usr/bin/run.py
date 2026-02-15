@@ -1872,8 +1872,9 @@ class MeticulousAddon:
     def _handle_profile_hover_event(self, data: Any):
         """Handle profileHover events from Socket.IO.
 
-        Fired when a profile is focused/selected on the machine or from another
-        client (e.g. iOS app). Updates the HA active profile select entity.
+        Fired when a profile is focused/selected from another Socket.IO client
+        (e.g. iOS app). Updates the HA active profile select entity.
+        Note: The physical device screen does not emit this event.
         """
         try:
             if isinstance(data, dict):
