@@ -1797,11 +1797,15 @@ class MeticulousAddon:
                         f"from {shot_timer:.1f}s to 0"
                     )
                     shot_timer = 0.0
+                    # Clear throttle entry to force publish of reset value
+                    self.last_field_values["shot_timer"] = None
             if is_now_idle and not self._was_in_idle and shot_timer > 0:
                 logger.info(
                     "State returned to Idle: resetting shot timer " f"from {shot_timer:.1f}s to 0"
                 )
                 shot_timer = 0.0
+                # Clear throttle entry to force publish of reset value
+                self.last_field_values["shot_timer"] = None
             self._was_in_idle = is_now_idle
             self._last_shot_timer_value = shot_timer
 
@@ -2234,12 +2238,12 @@ class MeticulousAddon:
     async def periodic_updates(self):
         """Perform periodic polling updates for non-real-time data.
 
-        All sensors are heartbeat-refreshed from the API every refresh_rate_minutes (default: 5).
+        Stale data (profile, settings, statistics) is refreshed every stale_data_refresh_interval
+        (default: 24 hours) to prevent state from becoming stale in Home Assistant.
         Discovery is checked frequently (every 0.5s) to minimize latency after MQTT connects.
+        Real-time sensors (state, pressure, flow, temperature, shot_timer)
+        come from Socket.IO events.
         """
-        # Initial delay to let Socket.IO establish
-        await asyncio.sleep(10)
-
         # Version migration: clean up old MQTT entities on first run after MQTT connects
         version_migration_done = False
 
@@ -2384,6 +2388,12 @@ class MeticulousAddon:
                     )
                     await asyncio.sleep(delay)
                     attempt += 1
+
+            # Attempt MQTT connection immediately before Socket.IO
+            # This ensures MQTT is ready when Socket.IO fires initial status events
+            if self.mqtt_enabled:
+                logger.info("Connecting to MQTT before Socket.IO...")
+                self._mqtt_connect()
 
             # Start background tasks
             tasks = [
