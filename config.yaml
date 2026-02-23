@@ -20,7 +20,7 @@ auth_api: false
 ingress: false
 panel_icon: mdi:coffee-maker
 panel_title: Meticulous Espresso
-image: ghcr.io/nickwilsonr/{arch}-meticulous-addon
+image: ghcr.io/manonstreet/{arch}-meticulous-addon
 map:
   - config:rw
   - ssl
