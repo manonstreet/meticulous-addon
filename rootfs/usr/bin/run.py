@@ -1147,7 +1147,7 @@ class MeticulousAddon:
             }
             self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=1, retain=True)
             discovery_count += 1
-            logger.debug(f"Active profile image discovery: published")
+            logger.debug("Active profile image discovery: published")
             await asyncio.sleep(0.01)
         except Exception as e:
             logger.error(f"Error in profile image discovery: {e}", exc_info=True)
