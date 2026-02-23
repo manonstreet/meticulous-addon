@@ -1499,20 +1499,14 @@ class MeticulousAddon:
              if name == self.current_profile),
             None,
         )
-        logger.info(
-            f"resolve_active_image: profile='{self.current_profile}' "
-            f"id={profile_id!r} profiles_count={len(self.available_profiles)} "
-            f"images_count={len(self.profile_images)}"
-        )
-
         filename = self.profile_images.get(profile_id) if profile_id else None
         if not filename:
-            logger.warning(f"No image found for active profile: '{self.current_profile}' (id={profile_id!r})")
+            logger.debug(f"No image found for active profile: {self.current_profile}")
             return
 
         cache_path = os.path.join(self.PROFILE_IMAGE_CACHE_DIR, filename)
         if not os.path.exists(cache_path):
-            logger.warning(f"Image not cached on disk: {cache_path}")
+            logger.debug(f"Image not cached yet for active profile: {filename}")
             return
 
         try:
