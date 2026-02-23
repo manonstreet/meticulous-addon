@@ -1300,6 +1300,7 @@ class MeticulousAddon:
 
                         # Store profile name to publish after discovery is sent
                         self.initial_profile_to_publish = profile_name
+                        self.current_profile = profile_name
                         logger.debug(
                             f"Stored initial profile to publish after discovery: {profile_name}"
                         )
