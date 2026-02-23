@@ -1499,15 +1499,20 @@ class MeticulousAddon:
              if name == self.current_profile),
             None,
         )
+        logger.info(
+            f"resolve_active_image: profile='{self.current_profile}' "
+            f"id={profile_id!r} profiles_count={len(self.available_profiles)} "
+            f"images_count={len(self.profile_images)}"
+        )
 
         filename = self.profile_images.get(profile_id) if profile_id else None
         if not filename:
-            logger.debug(f"No image found for active profile: {self.current_profile}")
+            logger.warning(f"No image found for active profile: '{self.current_profile}' (id={profile_id!r})")
             return
 
         cache_path = os.path.join(self.PROFILE_IMAGE_CACHE_DIR, filename)
         if not os.path.exists(cache_path):
-            logger.debug(f"Image not cached yet for active profile: {filename}")
+            logger.warning(f"Image not cached on disk: {cache_path}")
             return
 
         try:
@@ -1515,7 +1520,7 @@ class MeticulousAddon:
                 image_data = f.read()
             topic = f"{self.state_prefix}/active_profile_image/state"
             self.mqtt_client.publish(topic, image_data, qos=1, retain=True)
-            logger.debug(f"Published active_profile_image bytes: {len(image_data)} bytes ({filename})")
+            logger.info(f"Published active_profile_image: {len(image_data)} bytes ({filename})")
         except Exception as e:
             logger.error(f"Error publishing active profile image: {e}")
 
