@@ -214,7 +214,7 @@ When `fetch_available_profiles()` runs, the add-on:
 4. Writes them to `/config/www/meticulous/profiles/` — served by HA at `/local/meticulous/profiles/`
 5. Removes stale files (profiles that no longer exist)
 
-The resolved active-profile image URL (e.g. `/local/meticulous/profiles/abc123.jpg`) is published to `meticulous_espresso/sensor/active_profile_image/state`, which backs an `image` entity in Home Assistant created via MQTT discovery.
+The raw binary image bytes for the active profile are published to `meticulous_espresso/sensor/active_profile_image/state` via MQTT `image_topic`, which backs an `image` entity in Home Assistant created via MQTT discovery. The cached files in `/config/www/meticulous/profiles/` are the source for these publishes; HA receives and displays the bytes directly without any HTTP proxying.
 
 ### Socket.IO Events (Priority)
 

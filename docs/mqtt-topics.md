@@ -68,7 +68,7 @@ meticulous_espresso/sensor/total_shots/state            → 1234
 meticulous_espresso/sensor/last_shot_name/state         → "Espresso"
 meticulous_espresso/sensor/last_shot_rating/state       → "like"
 meticulous_espresso/sensor/last_shot_time/state         → "2024-01-15T10:30:00"
-meticulous_espresso/sensor/active_profile_image/state   → "/local/meticulous/profiles/abc123.jpg"
+meticulous_espresso/sensor/active_profile_image/state   → <binary PNG image data>
 meticulous_espresso/profiles                            → [{"profile_id": "...", "name": "...", "image_filename": "..."}]
 ```
 
