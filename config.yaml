@@ -1,9 +1,9 @@
 ---
-version: 0.31.7
+version: 0.31.7-dev
 slug: meticulous_espresso
-name: Meticulous Espresso
+name: Meticulous Espresso (Dev)
 description: Integration for Meticulous Espresso machines with local API support
-url: https://github.com/nickwilsonr/meticulous-addon
+url: https://github.com/manonstreet/meticulous-addon
 arch:
   - aarch64
   - amd64
