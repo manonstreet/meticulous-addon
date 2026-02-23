@@ -145,6 +145,7 @@ class MeticulousAddon:
         self.current_machine_status = "unknown"
         self.current_profile = None
         self.available_profiles = {}  # Map of profile_id -> profile_name
+        self.profile_images: Dict[str, str] = {}  # profile_id -> image filename (e.g. "abc123.jpg")
         self.device_info = None
 
         # Shot timer stale value tracking: ignore shot timer until it changes from stale value
@@ -1132,6 +1133,26 @@ class MeticulousAddon:
             logger.error(f"Error in profile discovery: {e}", exc_info=True)
             return
 
+        try:
+            # Publish active_profile_image as HA image entity
+            object_id = f"{self.slug}_active_profile_image"
+            config_topic = f"{self.discovery_prefix}/image/{object_id}/config"
+            payload = {
+                "name": "Active Profile Image",
+                "unique_id": object_id,
+                "url_topic": f"{self.state_prefix}/active_profile_image/state",
+                "content_type": "image/jpeg",
+                "availability_topic": self.availability_topic,
+                "device": device,
+                "icon": "mdi:image",
+            }
+            self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=1, retain=True)
+            discovery_count += 1
+            logger.debug(f"Active profile image discovery: published")
+            await asyncio.sleep(0.01)
+        except Exception as e:
+            logger.error(f"Error in profile image discovery: {e}", exc_info=True)
+
         logger.info(f"Discovery complete: published {discovery_count} configs")
 
         # Publish active profile state after discovery so HA recognizes the entity
@@ -1357,6 +1378,17 @@ class MeticulousAddon:
                     if profile_id:
                         self.available_profiles[profile_id] = profile_name
 
+                # Populate profile_images from display.image
+                self.profile_images = {}
+                for p in profiles_data:
+                    profile_id = getattr(p, "id", None) or getattr(p, "name", "")
+                    display = getattr(p, "display", None)
+                    image_url = getattr(display, "image", None) if display else None
+                    if profile_id and image_url:
+                        filename = os.path.basename(str(image_url))
+                        if filename:
+                            self.profile_images[profile_id] = filename
+
                 logger.debug(f"Fetched {len(self.available_profiles)} available profiles")
                 # Detect and log profile list changes
                 if old_profiles != self.available_profiles:
@@ -1371,8 +1403,107 @@ class MeticulousAddon:
                     if self.mqtt_client:
                         logger.debug("Republishing MQTT discovery with new profile list")
                         await self._mqtt_publish_discovery()
+
+                await self._sync_profile_images()
+                self._publish_profiles_manifest()
+                self._resolve_and_publish_active_image()
         except Exception as e:
             logger.error(f"Error fetching available profiles: {e}", exc_info=True)
+
+    # ---------------------------------------------------------------------
+    # Profile image sync and publishing
+    # ---------------------------------------------------------------------
+
+    PROFILE_IMAGE_CACHE_DIR = "/config/www/meticulous/profiles"
+
+    async def _sync_profile_images(self) -> None:
+        """Fetch and cache profile images from the machine to HA /www dir."""
+        if not self.api or not self.profile_images:
+            return
+
+        os.makedirs(self.PROFILE_IMAGE_CACHE_DIR, exist_ok=True)
+
+        # Build set of live filenames for cleanup
+        live_filenames = set(self.profile_images.values())
+
+        # Fetch any missing images
+        for profile_id, filename in self.profile_images.items():
+            cache_path = os.path.join(self.PROFILE_IMAGE_CACHE_DIR, filename)
+            if os.path.exists(cache_path):
+                continue  # already cached, skip API call
+
+            image_url = f"{self.api.base_url.rstrip('/')}/api/v1/profile/image/{filename}"
+            try:
+                api = self.api
+                url = image_url
+                image_data = await asyncio.get_running_loop().run_in_executor(
+                    None, lambda: api.session.get(url, stream=True)
+                )
+                if image_data.status_code == 200:
+                    with open(cache_path, "wb") as f:
+                        f.write(image_data.content)
+                    logger.info(f"Cached profile image: {filename}")
+                else:
+                    logger.warning(
+                        f"Failed to fetch image {filename}: HTTP {image_data.status_code}"
+                    )
+            except Exception as e:
+                logger.error(f"Error fetching profile image {filename}: {e}")
+
+        # Cleanup: remove files no longer referenced by any profile
+        try:
+            for fname in os.listdir(self.PROFILE_IMAGE_CACHE_DIR):
+                if fname not in live_filenames:
+                    try:
+                        os.remove(os.path.join(self.PROFILE_IMAGE_CACHE_DIR, fname))
+                        logger.info(f"Removed stale profile image: {fname}")
+                    except Exception as e:
+                        logger.warning(f"Could not remove stale image {fname}: {e}")
+        except Exception as e:
+            logger.warning(f"Error during image cleanup: {e}")
+
+    def _publish_profiles_manifest(self) -> None:
+        """Publish the profiles manifest to meticulous_espresso/profiles."""
+        if not (self.mqtt_client and self.mqtt_enabled):
+            return
+
+        manifest = [
+            {
+                "profile_id": pid,
+                "name": self.available_profiles.get(pid, "Unknown"),
+                "image_filename": fname,
+            }
+            for pid, fname in self.profile_images.items()
+        ]
+        self.mqtt_client.publish(
+            f"{self.slug}/profiles",
+            json.dumps(manifest),
+            qos=1,
+            retain=True,
+        )
+        logger.debug(f"Published profiles manifest: {len(manifest)} entries")
+
+    def _resolve_and_publish_active_image(self) -> None:
+        """Resolve active profile -> image filename -> publish resolved URL."""
+        if not (self.mqtt_client and self.mqtt_enabled and self.current_profile):
+            return
+
+        # Find profile_id for the current profile name
+        profile_id = next(
+            (pid for pid, name in self.available_profiles.items()
+             if name == self.current_profile),
+            None,
+        )
+
+        filename = self.profile_images.get(profile_id) if profile_id else None
+        if not filename:
+            logger.debug(f"No image found for active profile: {self.current_profile}")
+            return
+
+        image_url = f"/local/meticulous/profiles/{filename}"
+        topic = f"{self.state_prefix}/active_profile_image/state"
+        self.mqtt_client.publish(topic, image_url, qos=1, retain=True)
+        logger.debug(f"Published active_profile_image: {image_url}")
 
     # ---------------------------------------------------------------------
     # Test-facing helpers (wrappers) for discovery and backoff
@@ -1921,6 +2052,7 @@ class MeticulousAddon:
                 state_topic = f"{self.state_prefix}/active_profile/state"
                 self.mqtt_client.publish(state_topic, profile_name, qos=1, retain=True)
                 logger.debug(f"Published active_profile state: {profile_name}")
+                self._resolve_and_publish_active_image()
 
         except Exception as e:
             logger.error(f"Error handling profileHover event: {e}", exc_info=True)
@@ -2106,6 +2238,7 @@ class MeticulousAddon:
                 state_topic = f"{self.state_prefix}/active_profile/state"
                 self.mqtt_client.publish(state_topic, new_profile_name, qos=1, retain=True)
                 logger.debug(f"Published active_profile state: {new_profile_name}")
+                self._resolve_and_publish_active_image()
 
             await self.publish_to_homeassistant(profile_data)
             if profile_changed:
