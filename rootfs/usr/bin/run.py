@@ -1140,7 +1140,7 @@ class MeticulousAddon:
             payload = {
                 "name": "Active Profile Image",
                 "unique_id": object_id,
-                "url_topic": f"{self.state_prefix}/active_profile_image/state",
+                "image_topic": f"{self.state_prefix}/active_profile_image/state",
                 "availability_topic": self.availability_topic,
                 "device": device,
                 "icon": "mdi:image",
@@ -1505,10 +1505,19 @@ class MeticulousAddon:
             logger.debug(f"No image found for active profile: {self.current_profile}")
             return
 
-        image_url = f"/local/meticulous/profiles/{filename}"
-        topic = f"{self.state_prefix}/active_profile_image/state"
-        self.mqtt_client.publish(topic, image_url, qos=1, retain=True)
-        logger.debug(f"Published active_profile_image: {image_url}")
+        cache_path = os.path.join(self.PROFILE_IMAGE_CACHE_DIR, filename)
+        if not os.path.exists(cache_path):
+            logger.debug(f"Image not cached yet for active profile: {filename}")
+            return
+
+        try:
+            with open(cache_path, "rb") as f:
+                image_data = f.read()
+            topic = f"{self.state_prefix}/active_profile_image/state"
+            self.mqtt_client.publish(topic, image_data, qos=1, retain=True)
+            logger.debug(f"Published active_profile_image bytes: {len(image_data)} bytes ({filename})")
+        except Exception as e:
+            logger.error(f"Error publishing active profile image: {e}")
 
     # ---------------------------------------------------------------------
     # Test-facing helpers (wrappers) for discovery and backoff
