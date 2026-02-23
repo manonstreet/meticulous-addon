@@ -1141,7 +1141,6 @@ class MeticulousAddon:
                 "name": "Active Profile Image",
                 "unique_id": object_id,
                 "url_topic": f"{self.state_prefix}/active_profile_image/state",
-                "content_type": "image/jpeg",
                 "availability_topic": self.availability_topic,
                 "device": device,
                 "icon": "mdi:image",
