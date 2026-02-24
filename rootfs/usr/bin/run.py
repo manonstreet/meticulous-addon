@@ -1251,11 +1251,37 @@ class MeticulousAddon:
         if self.api:
             try:
                 api = self.api  # Capture reference to satisfy type checker
+
+                # Try GET /api/v1/profile/selected first (requires backend PR #320).
+                # Falls back to get_last_profile() on 404 or any error.
+                selected_profile_name = None
+                try:
+                    url = f"{api.base_url.rstrip('/')}/api/v1/profile/selected"
+                    resp = await asyncio.get_running_loop().run_in_executor(
+                        None, lambda: api.session.get(url)
+                    )
+                    if resp.status_code == 200:
+                        selected_id = resp.json().get("id")
+                        selected_profile_name = self.available_profiles.get(selected_id)
+                        if selected_profile_name:
+                            logger.info(
+                                f"Selected profile from /profile/selected: {selected_profile_name}"
+                            )
+                        else:
+                            logger.debug(
+                                f"/profile/selected returned id {selected_id!r} "
+                                f"not found in available profiles"
+                            )
+                    elif resp.status_code != 204:
+                        logger.debug(
+                            f"/profile/selected returned HTTP {resp.status_code}, "
+                            f"falling back to get_last_profile()"
+                        )
+                except Exception as e:
+                    logger.debug(f"Could not fetch /profile/selected: {e}")
+
                 last_profile = await asyncio.get_running_loop().run_in_executor(
                     None, lambda: api.get_last_profile()
-                )
-                logger.debug(
-                    f"get_last_profile returned: {last_profile}, type: {type(last_profile)}"
                 )
                 if (
                     last_profile
@@ -1263,13 +1289,8 @@ class MeticulousAddon:
                     and hasattr(last_profile, "profile")
                 ):
                     profile = last_profile.profile
-                    logger.debug(f"Profile: {profile}, type: {type(profile)}")
                     profile_name = getattr(profile, "name", None)
                     profile_id = getattr(profile, "id", None)
-                    logger.debug(
-                        f"Profile name: {profile_name}, id: {profile_id}, "
-                        f"temperature: {getattr(profile, 'temperature', None)}"
-                    )
 
                     if profile_name and profile_id:
                         # Set this as the active profile on the machine
@@ -1282,31 +1303,19 @@ class MeticulousAddon:
                             await asyncio.get_running_loop().run_in_executor(
                                 None, lambda: api.send_profile_hover(payload)
                             )
-                            logger.debug(f"Set active profile to: {profile_name}")
                         except Exception as e:
                             logger.debug(f"Could not set active profile: {e}")
 
-                        # Use this profile's targets
+                        # Use targets from the last loaded profile
                         initial_data["profile_author"] = getattr(profile, "author", None)
                         initial_data["target_temperature"] = getattr(profile, "temperature", None)
                         initial_data["target_weight"] = getattr(profile, "final_weight", None)
-                        logger.debug(
-                            f"Set profile targets: "
-                            f"temperature={initial_data.get('target_temperature')}, "
-                            f"weight={initial_data.get('target_weight')}"
-                        )
 
-                        # Store profile name to publish after discovery is sent
-                        self.initial_profile_to_publish = profile_name
-                        self.current_profile = profile_name
-                        logger.debug(
-                            f"Stored initial profile to publish after discovery: {profile_name}"
-                        )
-                else:
-                    logger.info(
-                        f"get_last_profile returned None, APIError, or missing "
-                        f"profile: {last_profile}"
-                    )
+                        # Use selected profile name if available, otherwise fall back
+                        active_name = selected_profile_name or profile_name
+                        self.initial_profile_to_publish = active_name
+                        self.current_profile = active_name
+                        logger.info(f"Active profile on startup: {active_name}")
 
             except Exception as e:
                 logger.debug(f"Could not fetch initial profile: {e}")
