@@ -2445,8 +2445,8 @@ class MeticulousAddon:
                     if not self.socket_connected:
                         await self.update_profile_info()
 
-                    # Fetch available profiles periodically (every refresh)
-                    if self.api and not self.available_profiles:
+                    # Fetch available profiles periodically (picks up new/deleted profiles)
+                    if self.api:
                         await self.fetch_available_profiles()
 
                     # Update settings (brightness, sounds)
