@@ -1,5 +1,5 @@
 ---
-version: 0.31.18-dev
+version: 0.31.19-dev
 slug: meticulous_espresso
 name: Meticulous Espresso (Dev)
 description: Integration for Meticulous Espresso machines with local API support
