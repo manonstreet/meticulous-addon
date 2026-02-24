@@ -1142,6 +1142,7 @@ class MeticulousAddon:
                 "name": "Active Profile Image",
                 "unique_id": object_id,
                 "image_topic": f"{self.state_prefix}/active_profile_image/state",
+                "json_attributes_topic": f"{self.state_prefix}/active_profile_image/attributes",
                 "availability_topic": self.availability_topic,
                 "device": device,
                 "icon": "mdi:image",
@@ -1558,6 +1559,10 @@ class MeticulousAddon:
                 image_data = f.read()
             topic = f"{self.state_prefix}/active_profile_image/state"
             self.mqtt_client.publish(topic, image_data, qos=1, retain=True)
+            attr_topic = f"{self.state_prefix}/active_profile_image/attributes"
+            self.mqtt_client.publish(
+                attr_topic, json.dumps({"filename": filename}), qos=1, retain=True
+            )
             logger.info(f"Published active_profile_image: {len(image_data)} bytes ({filename})")
         except Exception as e:
             logger.error(f"Error publishing active profile image: {e}")
