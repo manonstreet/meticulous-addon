@@ -1411,7 +1411,6 @@ class MeticulousAddon:
 
                 await self._sync_profile_images()
                 self._publish_profiles_manifest()
-                self._resolve_and_publish_active_image()
         except Exception as e:
             logger.error(f"Error fetching available profiles: {e}", exc_info=True)
 
