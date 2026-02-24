@@ -1347,6 +1347,7 @@ class MeticulousAddon:
         # Publish all available initial state
         await self.publish_to_homeassistant(initial_data)
         logger.debug(f"Published initial state for {len(initial_data)} sensors")
+        self._resolve_and_publish_active_image()
 
     async def fetch_available_profiles(self):
         """Fetch list of available profiles from the machine."""
@@ -2220,8 +2221,6 @@ class MeticulousAddon:
             profile_changed = new_profile_name != self.current_profile
 
             self.current_profile = new_profile_name
-            if profile_changed:
-                self._resolve_and_publish_active_image()
 
             # Set this as the active profile on the machine
             if profile_id:
@@ -2251,7 +2250,6 @@ class MeticulousAddon:
                 state_topic = f"{self.state_prefix}/active_profile/state"
                 self.mqtt_client.publish(state_topic, new_profile_name, qos=1, retain=True)
                 logger.debug(f"Published active_profile state: {new_profile_name}")
-                self._resolve_and_publish_active_image()
 
             await self.publish_to_homeassistant(profile_data)
             if profile_changed:
