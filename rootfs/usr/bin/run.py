@@ -1420,6 +1420,7 @@ class MeticulousAddon:
 
                 await self._sync_profile_images()
                 self._publish_profiles_manifest()
+                self._resolve_and_publish_active_image()
         except Exception as e:
             logger.error(f"Error fetching available profiles: {e}", exc_info=True)
 
@@ -2226,43 +2227,17 @@ class MeticulousAddon:
                 return
 
             new_profile_name = getattr(profile, "name", "Unknown")
-            profile_id = getattr(result, "id", None)
-            profile_changed = new_profile_name != self.current_profile
 
-            self.current_profile = new_profile_name
-
-            # Set this as the active profile on the machine
-            if profile_id:
-                try:
-                    payload = {
-                        "id": profile_id,
-                        "from": "app",
-                        "type": "focus",
-                    }
-                    await asyncio.get_running_loop().run_in_executor(
-                        None, lambda: api.send_profile_hover(payload)
-                    )
-                    if profile_changed:
-                        logger.debug(f"Set active profile to: {new_profile_name}")
-                except Exception as e:
-                    logger.debug(f"Could not set active profile: {e}")
-
+            # current_profile is managed exclusively by profileHover events and startup.
+            # update_profile_info() only updates peripheral sensor data (author, targets).
             profile_data = {
-                "active_profile": new_profile_name,
                 "profile_author": getattr(profile, "author", None),
                 "target_temperature": getattr(profile, "temperature", None),
                 "target_weight": getattr(profile, "final_weight", None),
             }
 
-            # Publish active profile state to SELECT entity immediately
-            if self.mqtt_enabled and self.mqtt_client:
-                state_topic = f"{self.state_prefix}/active_profile/state"
-                self.mqtt_client.publish(state_topic, new_profile_name, qos=1, retain=True)
-                logger.debug(f"Published active_profile state: {new_profile_name}")
-
             await self.publish_to_homeassistant(profile_data)
-            if profile_changed:
-                logger.debug(f"Profile changed to: {new_profile_name}")
+            logger.debug(f"Updated profile sensor data from last profile: {new_profile_name}")
 
         except Exception as e:
             logger.error(f"Error updating profile info: {e}", exc_info=True)
