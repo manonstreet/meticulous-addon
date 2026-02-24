@@ -146,6 +146,7 @@ class MeticulousAddon:
         self.current_profile = None
         self.available_profiles = {}  # Map of profile_id -> profile_name
         self.profile_images: Dict[str, str] = {}  # profile_id -> image filename (e.g. "abc123.jpg")
+        self._pending_hover_id: Optional[str] = None  # hover arrived before profiles fetched
         self.device_info = None
 
         # Shot timer stale value tracking: ignore shot timer until it changes from stale value
@@ -1283,14 +1284,22 @@ class MeticulousAddon:
                 last_profile = await asyncio.get_running_loop().run_in_executor(
                     None, lambda: api.get_last_profile()
                 )
+                logger.debug(
+                    f"get_last_profile returned: {last_profile}, type: {type(last_profile)}"
+                )
                 if (
                     last_profile
                     and not isinstance(last_profile, APIError)
                     and hasattr(last_profile, "profile")
                 ):
                     profile = last_profile.profile
+                    logger.debug(f"Profile: {profile}, type: {type(profile)}")
                     profile_name = getattr(profile, "name", None)
                     profile_id = getattr(profile, "id", None)
+                    logger.debug(
+                        f"Profile name: {profile_name}, id: {profile_id}, "
+                        f"temperature: {getattr(profile, 'temperature', None)}"
+                    )
 
                     if profile_name and profile_id:
                         # Set this as the active profile on the machine
@@ -1303,6 +1312,7 @@ class MeticulousAddon:
                             await asyncio.get_running_loop().run_in_executor(
                                 None, lambda: api.send_profile_hover(payload)
                             )
+                            logger.debug(f"Set active profile to: {profile_name}")
                         except Exception as e:
                             logger.debug(f"Could not set active profile: {e}")
 
@@ -1310,12 +1320,26 @@ class MeticulousAddon:
                         initial_data["profile_author"] = getattr(profile, "author", None)
                         initial_data["target_temperature"] = getattr(profile, "temperature", None)
                         initial_data["target_weight"] = getattr(profile, "final_weight", None)
+                        logger.debug(
+                            f"Set profile targets: "
+                            f"temperature={initial_data.get('target_temperature')}, "
+                            f"weight={initial_data.get('target_weight')}"
+                        )
 
                         # Use selected profile name if available, otherwise fall back
                         active_name = selected_profile_name or profile_name
+                        # Store profile name to publish after discovery is sent
                         self.initial_profile_to_publish = active_name
                         self.current_profile = active_name
+                        logger.debug(
+                            f"Stored initial profile to publish after discovery: {active_name}"
+                        )
                         logger.info(f"Active profile on startup: {active_name}")
+                else:
+                    logger.info(
+                        f"get_last_profile returned None, APIError, or missing "
+                        f"profile: {last_profile}"
+                    )
 
             except Exception as e:
                 logger.debug(f"Could not fetch initial profile: {e}")
@@ -1417,6 +1441,17 @@ class MeticulousAddon:
                     if self.mqtt_client:
                         logger.debug("Republishing MQTT discovery with new profile list")
                         await self._mqtt_publish_discovery()
+
+                # Resolve hover that arrived before the profile was in available_profiles
+                if self._pending_hover_id:
+                    pending_name = self.available_profiles.get(self._pending_hover_id)
+                    if pending_name:
+                        logger.info(f"Resolving pending profileHover: {pending_name}")
+                        self.current_profile = pending_name
+                        if self.mqtt_client and self.mqtt_enabled:
+                            state_topic = f"{self.state_prefix}/active_profile/state"
+                            self.mqtt_client.publish(state_topic, pending_name, qos=1, retain=True)
+                    self._pending_hover_id = None
 
                 await self._sync_profile_images()
                 self._publish_profiles_manifest()
@@ -2061,7 +2096,8 @@ class MeticulousAddon:
 
             profile_name = self.available_profiles.get(profile_id)
             if not profile_name:
-                logger.debug(f"profileHover for unknown id: {profile_id}")
+                logger.debug(f"profileHover for unknown id (pending): {profile_id}")
+                self._pending_hover_id = profile_id
                 return
 
             if profile_name == self.current_profile:
