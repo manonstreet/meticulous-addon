@@ -1165,10 +1165,9 @@ class MeticulousAddon:
             )
             self.initial_profile_to_publish = None
 
-        # Publish profiles manifest and active image URL now that MQTT is live.
-        # These may have been no-ops earlier if called before MQTT connected.
+        # Publish profiles manifest now that MQTT is live.
+        # (May have been a no-op earlier if called before MQTT connected.)
         self._publish_profiles_manifest()
-        self._resolve_and_publish_active_image()
 
     async def _mqtt_publish_initial_state(self) -> None:
         """Fetch and publish initial state of all sensors (T0 snapshot).
@@ -2221,6 +2220,8 @@ class MeticulousAddon:
             profile_changed = new_profile_name != self.current_profile
 
             self.current_profile = new_profile_name
+            if profile_changed:
+                self._resolve_and_publish_active_image()
 
             # Set this as the active profile on the machine
             if profile_id:
