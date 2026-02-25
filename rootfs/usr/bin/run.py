@@ -1142,7 +1142,6 @@ class MeticulousAddon:
                 "name": "Active Profile Image",
                 "unique_id": object_id,
                 "image_topic": f"{self.state_prefix}/active_profile_image/state",
-                "json_attributes_topic": f"{self.state_prefix}/active_profile_image/attributes",
                 "availability_topic": self.availability_topic,
                 "device": device,
                 "icon": "mdi:image",
@@ -1153,6 +1152,25 @@ class MeticulousAddon:
             await asyncio.sleep(0.01)
         except Exception as e:
             logger.error(f"Error in profile image discovery: {e}", exc_info=True)
+
+        try:
+            # Publish active_profile_filename as a sensor entity
+            object_id = f"{self.slug}_active_profile_filename"
+            config_topic = f"{self.discovery_prefix}/sensor/{object_id}/config"
+            payload = {
+                "name": "Active Profile Filename",
+                "unique_id": object_id,
+                "state_topic": f"{self.state_prefix}/active_profile_filename/state",
+                "availability_topic": self.availability_topic,
+                "device": device,
+                "icon": "mdi:file-image",
+            }
+            self.mqtt_client.publish(config_topic, jsonlib.dumps(payload), qos=1, retain=True)
+            discovery_count += 1
+            logger.debug("Active profile filename discovery: published")
+            await asyncio.sleep(0.01)
+        except Exception as e:
+            logger.error(f"Error in profile filename discovery: {e}", exc_info=True)
 
         logger.info(f"Discovery complete: published {discovery_count} configs")
 
@@ -1559,10 +1577,8 @@ class MeticulousAddon:
                 image_data = f.read()
             topic = f"{self.state_prefix}/active_profile_image/state"
             self.mqtt_client.publish(topic, image_data, qos=1, retain=True)
-            attr_topic = f"{self.state_prefix}/active_profile_image/attributes"
-            self.mqtt_client.publish(
-                attr_topic, json.dumps({"filename": filename}), qos=1, retain=True
-            )
+            filename_topic = f"{self.state_prefix}/active_profile_filename/state"
+            self.mqtt_client.publish(filename_topic, filename, qos=1, retain=True)
             logger.info(f"Published active_profile_image: {len(image_data)} bytes ({filename})")
         except Exception as e:
             logger.error(f"Error publishing active profile image: {e}")
