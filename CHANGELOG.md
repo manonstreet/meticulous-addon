@@ -80,7 +80,7 @@ All notable user-facing changes to this add-on are documented here.
 ## [0.29.1] - 2026-01-31
 
 ### Fixes
-- Removed redundant `select_profile` button (the `active_profile` dropdown already handles profile selection)
+- Removed redundant `select_profile` button (the `active_profile` dropdown already provides profile selection)
 
 ## [0.29.0] - 2026-01-31
 
