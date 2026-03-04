@@ -2,6 +2,12 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.31.8] - 2026-03-03
+
+### New Features
+- **Profile image entity** (manonstreet) — Your active profile's image now appears as a native Home Assistant image entity. Updates automatically when you change profiles via the mobile app or Home Assistant — and is ready to update from the machine itself when a future firmware update lands
+- **Active profile filename sensor** (manonstreet) — New sensor exposing the current profile's image filename, useful for building dynamic dashboard templates
+
 ## [0.31.7] - 2026-02-16
 
 ### Improvements
