@@ -128,10 +128,10 @@ jobs:
           build-args: |
             BUILD_FROM=${{ matrix.base }}
           tags: |
-            ghcr.io/nickwilsonr/${{ matrix.arch }}-meticulous-addon:latest
-            ghcr.io/nickwilsonr/${{ matrix.arch }}-meticulous-addon:${{ needs.prepare.outputs.version }}
-          cache-from: type=registry,ref=ghcr.io/nickwilsonr/${{ matrix.arch }}-meticulous-addon:buildcache
-          cache-to: type=registry,ref=ghcr.io/nickwilsonr/${{ matrix.arch }}-meticulous-addon:buildcache,mode=max
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.arch }}-meticulous-addon:latest
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.arch }}-meticulous-addon:${{ needs.prepare.outputs.version }}
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.arch }}-meticulous-addon:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.arch }}-meticulous-addon:buildcache,mode=max
 
       - name: Make GHCR package public
         if: ${{ env.GHCR_TOKEN != '' }}
