@@ -14,6 +14,8 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 import aiohttp
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # Import Meticulous API
 try:
@@ -322,6 +324,12 @@ class MeticulousAddon:
 
             # Initialize API (REST only, Socket.IO will connect separately)
             self.api = Api(base_url=base_url, options=options)  # type: ignore[assignment]
+
+            # Auto-retry once on stale pooled connections (overnight idle)
+            retry = Retry(total=1, connect=1, allowed_methods=None)
+            adapter = HTTPAdapter(max_retries=retry)
+            self.api.session.mount("http://", adapter)
+            self.api.session.mount("https://", adapter)
 
             # Test connection by fetching device info
             try:
