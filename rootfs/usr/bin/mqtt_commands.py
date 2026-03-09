@@ -13,6 +13,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _retry_on_stale_connection(func):
+    """Call func(), retrying once on ConnectionError (stale socket)."""
+    try:
+        return func()
+    except ConnectionError:
+        logger.debug("Stale connection, retrying")
+        return func()
+
+
 def mqtt_on_message(addon: "MeticulousAddon", client, userdata, msg):
     """Handle incoming MQTT messages for commands."""
     try:
@@ -62,7 +71,9 @@ def handle_command_start_shot(addon: "MeticulousAddon"):
         return
     try:
         logger.debug("Executing START action...")
-        result = addon.api.execute_action(ActionType.START)
+        result = _retry_on_stale_connection(
+            lambda: addon.api.execute_action(ActionType.START)
+        )
         logger.debug(f"execute_action returned: {result}, type: {type(result)}")
         if isinstance(result, APIError):
             logger.error(f"start_shot failed: {result.error}")
@@ -79,7 +90,9 @@ def handle_command_stop_shot(addon: "MeticulousAddon"):
         logger.error("Cannot stop shot: API not connected")
         return
     try:
-        result = addon.api.execute_action(ActionType.STOP)
+        result = _retry_on_stale_connection(
+            lambda: addon.api.execute_action(ActionType.STOP)
+        )
         if isinstance(result, APIError):
             logger.error(f"stop_shot failed: {result.error}")
         elif result.status != "ok":
@@ -95,7 +108,9 @@ def handle_command_continue_shot(addon: "MeticulousAddon"):
         logger.error("Cannot continue shot: API not connected")
         return
     try:
-        result = addon.api.execute_action(ActionType.CONTINUE)
+        result = _retry_on_stale_connection(
+            lambda: addon.api.execute_action(ActionType.CONTINUE)
+        )
         if isinstance(result, APIError):
             logger.error(f"continue_shot failed: {result.error}")
         elif result.status != "ok":
@@ -111,7 +126,9 @@ def handle_command_preheat(addon: "MeticulousAddon"):
         logger.error("Cannot preheat: API not connected")
         return
     try:
-        result = addon.api.execute_action(ActionType.PREHEAT)
+        result = _retry_on_stale_connection(
+            lambda: addon.api.execute_action(ActionType.PREHEAT)
+        )
         if isinstance(result, APIError):
             logger.error(f"preheat failed: {result.error}")
         elif result.status != "ok":
@@ -128,7 +145,9 @@ def handle_command_tare_scale(addon: "MeticulousAddon"):
         return
     try:
         logger.debug("Executing TARE action...")
-        result = addon.api.execute_action(ActionType.TARE)
+        result = _retry_on_stale_connection(
+            lambda: addon.api.execute_action(ActionType.TARE)
+        )
         logger.debug(f"execute_action returned: {result}, type: {type(result)}")
         if isinstance(result, APIError):
             logger.error(f"tare_scale failed: {result.error}")
@@ -146,7 +165,9 @@ def handle_command_abort_shot(addon: "MeticulousAddon"):
         return
     try:
         logger.debug("Executing ABORT action...")
-        result = addon.api.execute_action(ActionType.ABORT)
+        result = _retry_on_stale_connection(
+            lambda: addon.api.execute_action(ActionType.ABORT)
+        )
         logger.debug(f"execute_action returned: {result}, type: {type(result)}")
         if isinstance(result, APIError):
             logger.error(f"abort_shot failed: {result.error}")
@@ -164,7 +185,9 @@ def handle_command_home_plunger(addon: "MeticulousAddon"):
         return
     try:
         logger.debug("Executing HOME action...")
-        result = addon.api.execute_action(ActionType.HOME)
+        result = _retry_on_stale_connection(
+            lambda: addon.api.execute_action(ActionType.HOME)
+        )
         logger.debug(f"execute_action returned: {result}, type: {type(result)}")
         if isinstance(result, APIError):
             logger.error(f"home_plunger failed: {result.error}")
@@ -182,7 +205,9 @@ def handle_command_purge(addon: "MeticulousAddon"):
         return
     try:
         logger.debug("Executing PURGE action...")
-        result = addon.api.execute_action(ActionType.PURGE)
+        result = _retry_on_stale_connection(
+            lambda: addon.api.execute_action(ActionType.PURGE)
+        )
         logger.debug(f"execute_action returned: {result}, type: {type(result)}")
         if isinstance(result, APIError):
             logger.error(f"purge failed: {result.error}")
@@ -217,7 +242,9 @@ def handle_command_select_profile(addon: "MeticulousAddon", profile_name: str):
         # Send profileHover to highlight the profile on the machine UI
         # This just selects it visually - user still needs to press button to load
         payload = {"id": profile_id, "from": "app", "type": "focus"}
-        addon.api.send_profile_hover(payload)
+        _retry_on_stale_connection(
+            lambda: addon.api.send_profile_hover(payload)
+        )
         # send_profile_hover always returns None (not error on failure)
         logger.info(f"select_profile: Successfully highlighted profile ({profile_name})")
 
@@ -253,7 +280,9 @@ def handle_command_run_profile(addon: "MeticulousAddon"):
             return
 
         # Load and run the profile
-        result = addon.api.load_profile_by_id(profile_id)
+        result = _retry_on_stale_connection(
+            lambda: addon.api.load_profile_by_id(profile_id)
+        )
         if isinstance(result, APIError):
             logger.error(f"run_profile failed: {result.error}")
         else:
@@ -287,7 +316,9 @@ def handle_command_set_brightness(addon: "MeticulousAddon", payload: str):
         # Device processes commands asynchronously with a queue, so:
         # 1st send: device returns old value in next event (queue lag)
         # 2nd send: device now returns correct value from 1st command
-        result = addon.api.set_brightness(brightness_request)
+        result = _retry_on_stale_connection(
+            lambda: addon.api.set_brightness(brightness_request)
+        )
         if not isinstance(result, APIError):
             # Send again to overcome queue lag
             result = addon.api.set_brightness(brightness_request)
@@ -315,7 +346,9 @@ def handle_command_enable_sounds(addon: "MeticulousAddon", payload: str):
         enabled = payload.lower() in ("true", "1", "on", "yes")
         # Use the pyMeticulous API wrapper
         settings = PartialSettings(enable_sounds=enabled)
-        result = addon.api.update_setting(settings)
+        result = _retry_on_stale_connection(
+            lambda: addon.api.update_setting(settings)
+        )
         if isinstance(result, APIError):
             logger.error(f"enable_sounds failed: {result.error}")
         else:
