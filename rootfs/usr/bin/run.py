@@ -326,7 +326,7 @@ class MeticulousAddon:
             self.api = Api(base_url=base_url, options=options)  # type: ignore[assignment]
 
             # Auto-retry once on stale pooled connections (overnight idle)
-            retry = Retry(total=1, connect=1, allowed_methods=None)
+            retry = Retry(total=1, connect=1, read=1, allowed_methods=None)
             adapter = HTTPAdapter(max_retries=retry)
             self.api.session.mount("http://", adapter)
             self.api.session.mount("https://", adapter)
