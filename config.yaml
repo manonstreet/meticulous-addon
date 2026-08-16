@@ -1,4 +1,4 @@
-version: 0.31.9.4-dev
+version: 0.31.9.5-dev
 slug: meticulous_espresso
 name: Meticulous Espresso (Dev)
 description: Integration for Meticulous Espresso machines with local API support
@@ -31,6 +31,7 @@ ports:
 environment: {}
 options:
   machine_ip: "example: 192.168.1.100 or meticulous.local"
+  machine_port: 80
   enable_delta_filtering: true
   temperature_delta: 0.5
   pressure_delta: 0.2
@@ -47,6 +48,7 @@ options:
   mqtt_password: ""
 schema:
   machine_ip: str?
+  machine_port: int(1,65535)?
   enable_delta_filtering: bool?
   temperature_delta: float(0,10)?
   pressure_delta: float(0,5)?

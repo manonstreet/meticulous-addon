@@ -2,6 +2,15 @@
 
 All notable user-facing changes to this add-on are documented here.
 
+## [0.31.9] - 2026-08-15
+
+### Fixes
+- **Restored connection to machines running current firmware** — Recent machine firmware serves its API through nginx on the standard HTTP port and no longer exposes port 8080 to the network, which left the add-on unable to connect after an automatic machine update. The add-on now uses the standard port by default, so affected installs reconnect with no configuration change
+- **Last shot sensors update again after a shot** (manonstreet) — `last_shot_name` and `last_shot_time` stopped updating because the machine omits the `sensors` field on a shot's final data point, which failed validation. The add-on now falls back to reading the shot metadata directly, and automatically retries requests that fail on a stale connection after a long idle period
+
+### New Options
+- **`machine_port`** — Overrides the port used to reach the machine (default `80`). Only needed for a self-hosted or emulated backend that isn't behind nginx; leave it alone for a real machine
+
 ## [0.31.8] - 2026-03-03
 
 ### New Features
