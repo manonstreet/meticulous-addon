@@ -48,6 +48,9 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# Machine firmware fronts the REST API and Socket.IO with nginx on port 80.
+DEFAULT_MACHINE_PORT = 80
+
 # Suppress verbose Pydantic validation errors from pyMeticulous
 logging.getLogger("pydantic").setLevel(logging.CRITICAL)
 logging.getLogger("pydantic_core").setLevel(logging.CRITICAL)
@@ -72,6 +75,13 @@ class MeticulousAddon:
         if raw_machine_ip.lower().startswith("example") or " " in raw_machine_ip:
             raw_machine_ip = ""
         self.machine_ip = raw_machine_ip
+        # Machine API port. The firmware serves the REST API and Socket.IO
+        # through nginx on port 80; the backend's own 8080 listener is bound to
+        # localhost and is not reachable over the network. 8080 remains
+        # available as an override for an emulated/dev backend run without nginx.
+        self.machine_port = self._parse_machine_port(
+            self.config.get("machine_port", DEFAULT_MACHINE_PORT)
+        )
         # Refresh configuration
         stale_interval_hours = int(self.config.get("stale_data_refresh_interval", 24))
         self.stale_data_refresh_interval = stale_interval_hours * 3600
@@ -192,6 +202,38 @@ class MeticulousAddon:
         if self.mqtt_enabled and not (self.mqtt_username and self.mqtt_password):
             self._fetch_mqtt_credentials_from_supervisor()
 
+    @staticmethod
+    def _parse_machine_port(raw: Any) -> int:
+        """Coerce the configured machine port, falling back to the default.
+
+        Home Assistant validates the option against the add-on schema, but the
+        option may be absent, blank, or hand-edited, so bad values fall back to
+        the default rather than crashing startup.
+        """
+        try:
+            port = int(str(raw).strip())
+        except (TypeError, ValueError):
+            logger.warning(
+                f"Invalid machine_port {raw!r}, using {DEFAULT_MACHINE_PORT}"
+            )
+            return DEFAULT_MACHINE_PORT
+        if not 1 <= port <= 65535:
+            logger.warning(
+                f"machine_port {port} out of range, using {DEFAULT_MACHINE_PORT}"
+            )
+            return DEFAULT_MACHINE_PORT
+        return port
+
+    @property
+    def base_url(self) -> str:
+        """Base URL of the machine API, without a trailing slash.
+
+        The port is omitted when standard so the Host header stays clean.
+        """
+        if self.machine_port == DEFAULT_MACHINE_PORT:
+            return f"http://{self.machine_ip}"
+        return f"http://{self.machine_ip}:{self.machine_port}"
+
     def _fetch_mqtt_credentials_from_supervisor(self):
         """Fetch MQTT credentials from Home Assistant Supervisor Services API."""
         if not self.supervisor_token:
@@ -291,7 +333,9 @@ class MeticulousAddon:
 
         try:
             # Build base URL
-            base_url = f"http://{self.machine_ip}:8080/"
+            # No trailing slash: pyMeticulous builds f"{base_url}/api/v1/...",
+            # and nginx 404s on the resulting "//api/v1/..." double slash.
+            base_url = self.base_url
 
             # Setup event handlers for Socket.IO using ApiOptions
             options = ApiOptions(
